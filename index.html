@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob: filesystem: about: ws: wss:; script-src * 'self' 'unsafe-inline' 'unsafe-eval'; connect-src * 'self'; img-src * 'self' data: blob:; frame-src *; style-src * 'self' 'unsafe-inline';">
+    <meta name="apple-mobile-web-app-title" content="Ibersilos">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%231A1A1A'/%3E%3Ctext x='96' y='130' font-family='Arial Black' font-size='90' font-weight='900' fill='white' text-anchor='middle'%3EIS%3C/text%3E%3Crect x='20' y='140' width='152' height='14' fill='%23E30613' rx='4'/%3E%3C/svg%3E">
+    <!-- manifest rimosso per APK -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ibersilos — App Autista</title>
+    <!-- Firebase SDK -->
+    <!-- Firebase Compat SDK — compatibile con tutte le versioni Android WebView -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --red: #E30613;
+            --dark-red: #B8050F;
+            --yellow: #FFD100;
+            --black: #1A1A1A;
+            --gray: #F5F5F5;
+            --border: #E0E0E0;
+            --green: #28a745;
+            --text-dim: #666;
+        }
+
+        body { background: var(--gray); color: var(--black); overflow-x: hidden; }
+        .container { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.12); }
+
+        /* ========== LOGO CSS (fedele all'originale) ========== */
+        .logo-ibersilos {
+            position: relative;
+            display: inline-block;
+            font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
+            font-weight: 900;
+            line-height: 0.85;
+            letter-spacing: -2px;
+        }
+        .logo-ibersilos .iber,
+        .logo-ibersilos .silos {
+            display: block;
+            color: white;
+            position: relative;
+            z-index: 2;
+        }
+        .logo-ibersilos .silos { margin-top: -5px; }
+
+        /* Pennellate CSS */
+        .brush-strokes {
+            position: absolute;
+            right: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+        .brush-red-1 {
+            position: absolute;
+            background: var(--red);
+            transform: rotate(-35deg);
+            border-radius: 10px 0 0 10px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+        }
+        .brush-red-1::before {
+            content: '';
+            position: absolute;
+            left: -5px; top: 0;
+            height: 100%;
+            background: var(--red);
+            border-radius: 50%;
+            filter: blur(2px);
+        }
+        .brush-yellow {
+            position: absolute;
+            background: var(--yellow);
+            transform: rotate(-35deg);
+            border-radius: 10px 0 0 10px;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.15);
+        }
+        .brush-yellow::before {
+            content: '';
+            position: absolute;
+            left: -4px; top: 0;
+            height: 100%;
+            background: var(--yellow);
+            border-radius: 50%;
+            filter: blur(2px);
+        }
+        .brush-red-2 {
+            position: absolute;
+            background: var(--red);
+            transform: rotate(-35deg);
+            border-radius: 10px 0 0 10px;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.2);
+        }
+        .brush-red-2::before {
+            content: '';
+            position: absolute;
+            left: -4px; top: 0;
+            height: 100%;
+            background: var(--red);
+            border-radius: 50%;
+            filter: blur(2px);
+        }
+
+        /* ---- LOGO SIZES ---- */
+
+        /* LOGIN (grande) */
+        .logo-login .iber, .logo-login .silos { font-size: 5.5rem; text-shadow: -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000, -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 3px 0 #000; }
+        .logo-login .brush-strokes { width: 80px; height: 100px; right: -10px; }
+        .logo-login .brush-red-1 { width: 70px; height: 18px; top: 20px; right: 0; }
+        .logo-login .brush-red-1::before { width: 20px; }
+        .logo-login .brush-yellow { width: 60px; height: 16px; top: 45px; right: 10px; }
+        .logo-login .brush-yellow::before { width: 16px; }
+        .logo-login .brush-red-2 { width: 45px; height: 14px; top: 68px; right: 25px; }
+        .logo-login .brush-red-2::before { width: 14px; }
+
+        /* HEADER (piccolo) */
+        .logo-header .iber, .logo-header .silos { font-size: 1.6rem; text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, 0 -1.5px 0 #000, 0 1.5px 0 #000; }
+        .logo-header .brush-strokes { width: 28px; height: 32px; right: -4px; }
+        .logo-header .brush-red-1 { width: 26px; height: 6px; top: 5px; right: 0; }
+        .logo-header .brush-red-1::before { width: 8px; }
+        .logo-header .brush-yellow { width: 22px; height: 5px; top: 14px; right: 2px; }
+        .logo-header .brush-yellow::before { width: 7px; }
+        .logo-header .brush-red-2 { width: 17px; height: 4px; top: 22px; right: 8px; }
+        .logo-header .brush-red-2::before { width: 6px; }
+
+        /* ========== LOGIN ========== */
+        .login-page {
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            padding: 40px 30px;
+            background: linear-gradient(135deg, #fff 0%, var(--gray) 100%);
+        }
+        .login-logo {
+            width: 300px;
+            background: white;
+            padding: 30px 30px 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(227,6,19,0.15);
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .login-version { font-size: 0.85rem; color: var(--text-dim); margin-top: 14px; font-weight: 600; }
+        .login-title { font-size: 1.5rem; font-weight: 700; color: var(--red); margin-bottom: 6px; }
+        .login-subtitle { color: var(--text-dim); margin-bottom: 32px; }
+
+        .login-form { width: 100%; max-width: 340px; }
+        .login-input-group { margin-bottom: 18px; }
+        .login-label { display: block; margin-bottom: 7px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .login-input { width: 100%; padding: 15px; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem; transition: all 0.3s; }
+        .login-input:focus { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(227,6,19,0.1); }
+        .btn-login {
+            width: 100%; padding: 17px;
+            background: var(--red); color: white;
+            border: none; border-radius: 10px;
+            font-size: 1rem; font-weight: 700;
+            cursor: pointer; text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 14px rgba(227,6,19,0.3);
+            transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-login:hover { background: var(--dark-red); transform: translateY(-1px); }
+        .btn-login:active { transform: scale(0.98); }
+        .login-hint { margin-top: 24px; font-size: 0.78rem; color: #bbb; text-align: center; }
+
+        /* ========== SYNC BAR ========== */
+        .sync-bar { position: fixed; top: 0; left: 0; right: 0; height: 4px; z-index: 10001; transition: all 0.3s; background: transparent; }
+        .sync-bar.syncing { background: var(--yellow); animation: pulse-bar 1s infinite; }
+        .sync-bar.success { background: var(--green); }
+        .sync-bar.error { background: var(--red); }
+        @keyframes pulse-bar { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+        /* ========== HEADER ========== */
+        .app-header {
+            background: #fff;
+            border-bottom: 4px solid var(--red);
+            border-top: 4px solid var(--yellow);
+            padding: 16px 20px;
+        }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .logo-wrap-header { padding: 6px 10px; background: white; border-radius: 8px; }
+        .user-info { text-align: right; }
+        .user-name { font-size: 1.05rem; font-weight: 700; }
+        .btn-logout { background: var(--red); color: white; border: none; padding: 5px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; cursor: pointer; margin-top: 4px; }
+        .btn-logout:hover { background: var(--dark-red); }
+
+        .vehicle-badge {
+            background: var(--yellow); color: var(--black);
+            padding: 7px 14px; border-radius: 20px;
+            font-size: 0.9rem; font-weight: 700;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .date-display { font-size: 0.95rem; font-weight: 600; }
+
+        .presenza-box {
+            background: var(--red);
+            border: 3px solid var(--yellow);
+            border-radius: 12px;
+            padding: 14px; margin-top: 14px;
+            text-align: center;
+        }
+        .presenza-counter { font-size: 2.5rem; font-weight: 800; color: white; line-height: 1; }
+        .presenza-label { font-size: 0.85rem; color: rgba(255,255,255,0.9); font-weight: 600; margin-top: 2px; }
+
+        /* Documenti in header */
+        .documenti-header { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 2px solid var(--gray); }
+        .doc-item { background: #f8f9fa; border-radius: 8px; padding: 10px 6px; text-align: center; border-left: 3px solid #ccc; }
+        .doc-item.scaduto { border-left-color: var(--red); background: #ffebee; }
+        .doc-item.in-scadenza { border-left-color: var(--yellow); background: #fffde7; }
+        .doc-item.valido { border-left-color: var(--green); }
+        .doc-icon { font-size: 1.3rem; margin-bottom: 3px; }
+        .doc-nome { font-size: 0.65rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; }
+        .doc-giorni { font-size: 0.78rem; font-weight: 700; margin-top: 3px; }
+
+        /* ========== NAV TABS ========== */
+        .nav-tabs { display: flex; background: white; border-bottom: 3px solid var(--gray); position: sticky; top: 0; z-index: 100; }
+        .nav-tab {
+            flex: 1; padding: 14px 5px; text-align: center;
+            background: none; border: none;
+            font-size: 0.82rem; color: var(--text-dim);
+            cursor: pointer; font-weight: 500;
+            position: relative; transition: color 0.2s;
+        }
+        .nav-tab.active { color: var(--red); font-weight: 700; }
+        .nav-tab.active::after { content: ''; position: absolute; bottom: -3px; left: 15%; right: 15%; height: 4px; background: var(--red); border-radius: 3px 3px 0 0; }
+        .nav-tab-icon { display: block; font-size: 1.2rem; margin-bottom: 2px; }
+
+        /* ========== SECTIONS ========== */
+        .section { display: none; padding: 18px; animation: fadeIn 0.3s; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ========== CARDS ========== */
+        .card { background: white; border-radius: 12px; padding: 18px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); border-left: 4px solid var(--red); }
+        .card.card-yellow { border-left-color: var(--yellow); }
+        .card.card-green { border-left-color: var(--green); }
+        .card-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; color: var(--red); letter-spacing: 0.3px; }
+        .card-title.yellow { color: var(--black); }
+        .card-title svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        /* ========== BUTTONS ========== */
+        .btn-primary {
+            width: 100%; padding: 17px;
+            background: var(--red); color: white;
+            border: none; border-radius: 10px;
+            font-size: 1rem; font-weight: 700;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+            margin-bottom: 18px;
+            box-shadow: 0 4px 14px rgba(227,6,19,0.3);
+            transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .btn-primary:hover { background: var(--dark-red); transform: translateY(-1px); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary.yellow { background: var(--yellow); color: var(--black); box-shadow: 0 4px 14px rgba(255,209,0,0.35); }
+        .btn-primary.yellow:hover { background: #e6bc00; }
+
+        .btn-secondary {
+            padding: 11px 18px; background: white;
+            color: var(--black); border: 2px solid var(--red);
+            border-radius: 8px; font-size: 0.9rem;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+            font-weight: 600; transition: all 0.2s;
+        }
+        .btn-secondary:hover { background: var(--red); color: white; }
+        .btn-secondary.full { width: 100%; justify-content: center; margin-top: 12px; }
+
+        .btn-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            border: none; cursor: pointer; display: flex;
+            align-items: center; justify-content: center;
+            background: var(--gray); transition: background 0.2s;
+        }
+        .btn-icon:hover { background: #e0e0e0; }
+        .btn-icon svg { width: 16px; height: 16px; stroke: var(--black); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .btn-icon.danger svg { stroke: var(--red); }
+
+        /* ========== FORM ========== */
+        .form-group { margin-bottom: 18px; }
+        .form-label { display: block; margin-bottom: 7px; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-input, .form-select {
+            width: 100%; padding: 13px;
+            border: 2px solid var(--border);
+            border-radius: 8px; font-size: 0.95rem;
+            transition: all 0.3s; background: white; color: var(--black);
+        }
+        .form-input:focus, .form-select:focus { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(227,6,19,0.1); }
+        .form-input:disabled { background: var(--gray); }
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        /* ========== STATS ========== */
+        .km-display {
+            background: linear-gradient(135deg, var(--red), var(--dark-red));
+            color: white; padding: 20px; border-radius: 12px;
+            text-align: center; margin-bottom: 18px;
+            border: 3px solid var(--yellow);
+            box-shadow: 0 4px 14px rgba(227,6,19,0.25);
+        }
+        .km-value { font-size: 2.8rem; font-weight: 800; line-height: 1; }
+        .km-label { font-size: 0.85rem; opacity: 0.9; margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+        .stat-box { background: white; padding: 18px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.07); border-top: 3px solid var(--red); }
+        .stat-box.yellow { border-top-color: var(--yellow); }
+        .stat-value { font-size: 2rem; font-weight: 800; color: var(--red); }
+        .stat-value.yellow-val { color: var(--black); }
+        .stat-label { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; font-weight: 600; }
+
+        .riepilogo-box {
+            background: var(--yellow); color: var(--black);
+            padding: 18px; border-radius: 12px;
+            margin-bottom: 18px; border: 3px solid var(--red);
+        }
+        .riepilogo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; text-align: center; }
+        .riepilogo-value { font-size: 2.2rem; font-weight: 800; }
+        .riepilogo-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* ========== LISTA ITEMS ========== */
+        .list-item {
+            background: var(--gray); border-radius: 10px;
+            padding: 14px; margin-bottom: 10px;
+            border-left: 4px solid var(--yellow);
+            transition: transform 0.2s;
+        }
+        .list-item:hover { transform: translateX(3px); }
+        .list-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .list-item-title { font-weight: 700; font-size: 0.95rem; }
+        .list-item-sub { font-size: 0.82rem; color: var(--text-dim); }
+        .list-item-actions { display: flex; gap: 6px; }
+
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 700; }
+        .badge-red { background: var(--red); color: white; }
+        .badge-yellow { background: var(--yellow); color: var(--black); }
+        .badge-green { background: var(--green); color: white; }
+        .badge-gray { background: #e0e0e0; color: var(--text-dim); }
+
+        .sync-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; }
+        .sync-badge.synced { background: #d4edda; color: #155724; }
+        .sync-badge.pending { background: var(--yellow); color: var(--black); }
+
+        /* ========== CALENDARIO ========== */
+        .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .cal-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+        .cal-btn:hover { background: var(--gray); }
+        .cal-month { font-weight: 700; text-transform: uppercase; font-size: 0.95rem; }
+        .cal-headers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
+        .cal-header { font-size: 0.7rem; text-align: center; color: var(--text-dim); font-weight: 600; padding: 4px 0; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .cal-day {
+            aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+            background: #f0f0f0; color: #999;
+        }
+        .cal-day.presente { background: var(--red); color: white; }
+        .cal-day.estero { background: var(--yellow); color: var(--black); border: 2px solid var(--red); }
+        .cal-day.oggi { outline: 2px solid var(--red); outline-offset: 1px; }
+        .cal-day.empty { background: transparent; }
+
+        /* ========== SOSTA NOTTURNA ========== */
+        .sosta-box {
+            background: white; padding: 18px; border-radius: 12px;
+            margin-bottom: 18px; text-align: center;
+            border: 3px solid var(--yellow);
+            border-left: 4px solid var(--red);
+        }
+        .sosta-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; color: var(--red); font-weight: 700; }
+        .sosta-flag { font-size: 3.5rem; margin: 10px 0; }
+        .sosta-paese { font-size: 1.2rem; font-weight: 700; }
+
+        /* ========== MISSIONE ATTIVA ========== */
+        .missione-hero {
+            background: linear-gradient(135deg, var(--red), var(--dark-red));
+            color: white; padding: 20px; border-radius: 14px;
+            margin-bottom: 18px; border: 3px solid var(--yellow);
+            box-shadow: 0 4px 16px rgba(227,6,19,0.25);
+        }
+        .missione-id { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; opacity: 0.85; margin-bottom: 6px; }
+        .missione-rotta { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+        .missione-citta { flex: 1; }
+        .missione-citta-label { font-size: 0.7rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; }
+        .missione-citta-nome { font-size: 1.4rem; font-weight: 800; }
+        .missione-freccia { width: 40px; height: 2px; background: var(--yellow); position: relative; flex-shrink: 0; }
+        .missione-freccia::after { content: '▶'; position: absolute; right: -8px; top: -7px; font-size: 0.7rem; color: var(--yellow); }
+        .missione-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+        .missione-stat { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 10px 6px; text-align: center; }
+        .missione-stat-val { font-size: 1.2rem; font-weight: 800; }
+        .missione-stat-label { font-size: 0.68rem; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+        /* Progresso step */
+        .steps-wrap { background: white; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); border-left: 4px solid var(--yellow); }
+        .steps-row { display: flex; align-items: center; margin-bottom: 8px; }
+        .step-dot { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
+        .step-dot.done { background: var(--green); color: white; }
+        .step-dot.active { background: var(--yellow); color: var(--black); border: 2px solid var(--red); }
+        .step-dot.todo { background: #e0e0e0; color: #999; }
+        .step-line { flex: 1; height: 3px; background: #e0e0e0; }
+        .step-line.done { background: var(--green); }
+        .steps-labels { display: flex; justify-content: space-between; }
+        .step-label { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; color: var(--text-dim); text-align: center; width: 30px; }
+        .step-label.active { color: var(--red); }
+
+        /* Action buttons */
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+        .action-btn {
+            border-radius: 12px; padding: 16px 12px;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            border: 2px solid var(--border); cursor: pointer;
+            background: white; transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+        .action-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+        .action-btn:active { transform: scale(0.97); }
+        .action-btn.verde { border-color: #a5d6a7; background: #f1f8f1; }
+        .action-btn.giallo { border-color: var(--yellow); background: #fffde7; }
+        .action-btn.grigio { border-color: #e0e0e0; background: var(--gray); }
+        .action-btn.rosso { border-color: #ef9a9a; background: #ffebee; }
+        .action-btn svg { width: 28px; height: 28px; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .action-btn.verde svg { stroke: #2e7d32; }
+        .action-btn.giallo svg { stroke: #b8860b; }
+        .action-btn.grigio svg { stroke: #666; }
+        .action-btn.rosso svg { stroke: var(--red); }
+        .action-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--black); text-align: center; }
+
+        /* Dettagli carico */
+        .dettaglio-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--gray); font-size: 0.9rem; }
+        .dettaglio-row:last-child { border-bottom: none; }
+        .dettaglio-key { color: var(--text-dim); }
+        .dettaglio-val { font-weight: 600; }
+
+        /* ========== CHAT ========== */
+        .chat-wrap { display: flex; flex-direction: column; height: calc(100vh - 220px); }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 12px 0; display: flex; flex-direction: column; gap: 10px; }
+        .chat-messages::-webkit-scrollbar { width: 3px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: var(--border); }
+        .msg { max-width: 78%; display: flex; flex-direction: column; gap: 3px; }
+        .msg.mine  { align-self: flex-end;  align-items: flex-end; }
+        .msg.theirs { align-self: flex-start; align-items: flex-start; }
+        .msg-sender { font-size: 0.72rem; font-weight: 700; color: var(--text-dim); padding: 0 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .msg-bubble { padding: 10px 14px; border-radius: 16px; font-size: 0.92rem; line-height: 1.45; }
+        .msg.mine  .msg-bubble { background: var(--red); color: white; border-bottom-right-radius: 4px; }
+        .msg.theirs .msg-bubble { background: var(--gray); color: var(--black); border-bottom-left-radius: 4px; }
+        .msg-time { font-size: 0.68rem; color: #bbb; padding: 0 4px; }
+        .msg.mine .msg-time { text-align: right; }
+        .chat-input-wrap { padding: 12px 0 0; border-top: 2px solid var(--gray); display: flex; gap: 8px; }
+        .chat-input { flex: 1; padding: 12px 16px; border: 2px solid var(--border); border-radius: 24px; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+        .chat-input:focus { border-color: var(--red); }
+        .chat-send { width: 44px; height: 44px; border-radius: 50%; background: var(--red); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+        .chat-send svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        /* ========== DOCUMENTI ========== */
+        .doc-list-item { background: var(--gray); border-radius: 10px; padding: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; border-left: 4px solid #ccc; }
+        .doc-list-item.ok { border-left-color: var(--green); }
+        .doc-list-item.pending { border-left-color: var(--yellow); }
+        .doc-list-item svg { width: 24px; height: 24px; stroke: var(--text-dim); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+        .doc-info { flex: 1; }
+        .doc-name { font-weight: 600; font-size: 0.9rem; }
+        .doc-meta { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
+        .doc-status { font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; }
+        .doc-status.ok { background: #e8f5e9; color: #2e7d32; }
+        .doc-status.pending { background: #fffde7; color: #b8860b; }
+
+        .upload-zone {
+            border: 2px dashed var(--border); border-radius: 12px;
+            padding: 28px; text-align: center; cursor: pointer;
+            background: white; transition: border-color 0.2s; margin-bottom: 16px;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .upload-zone:hover { border-color: var(--red); }
+        .upload-zone svg { width: 40px; height: 40px; stroke: #ccc; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+        .upload-zone-title { font-weight: 700; font-size: 0.95rem; }
+        .upload-zone-sub { font-size: 0.82rem; color: var(--text-dim); }
+
+        /* ========== MODAL ========== */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: flex-end; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white; width: 100%; max-width: 480px;
+            border-radius: 20px 20px 0 0;
+            padding: 24px; max-height: 92vh; overflow-y: auto;
+            animation: slideUp 0.3s;
+            border-top: 4px solid var(--red);
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+        .modal-title { font-size: 1.1rem; font-weight: 700; color: var(--red); }
+        .modal-close { background: none; border: none; font-size: 1.6rem; cursor: pointer; color: var(--red); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; line-height: 1; }
+        .modal-close:hover { background: #ffebee; }
+
+        .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: -8px auto 16px; }
+
+        .toggle-group { display: flex; background: var(--gray); border-radius: 10px; padding: 4px; margin-bottom: 18px; }
+        .toggle-btn { flex: 1; padding: 11px; border: none; background: transparent; border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .toggle-btn.active { background: var(--red); color: white; box-shadow: 0 2px 8px rgba(227,6,19,0.3); }
+
+        /* ========== TOAST ========== */
+        .toast-container { position: fixed; top: 16px; right: 16px; z-index: 10000; display: flex; flex-direction: column; gap: 8px; max-width: 320px; pointer-events: none; }
+        .toast {
+            background: white; border-radius: 12px; padding: 14px 18px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            display: flex; align-items: flex-start; gap: 12px;
+            animation: toastIn 0.3s ease;
+            border-left: 4px solid var(--red);
+            pointer-events: all;
+        }
+        .toast.success { border-left-color: var(--green); }
+        .toast.warning { border-left-color: var(--yellow); }
+        .toast.info { border-left-color: #17a2b8; }
+        .toast svg { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-top: 1px; }
+        .toast.success svg { stroke: var(--green); }
+        .toast.warning svg { stroke: #b8860b; }
+        .toast.error svg { stroke: var(--red); }
+        .toast.info svg { stroke: #17a2b8; }
+        .toast-body {}
+        .toast-title { font-weight: 700; font-size: 0.9rem; }
+        .toast-msg { font-size: 0.8rem; color: var(--text-dim); margin-top: 2px; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* ========== LOADING ========== */
+        .loading { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.85); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+        .loading.active { display: flex; }
+        .spinner { width: 48px; height: 48px; border: 4px solid var(--gray); border-top: 4px solid var(--red); border-radius: 50%; animation: spin 0.9s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-weight: 700; color: var(--red); font-size: 0.95rem; }
+
+        .empty-state { text-align: center; padding: 36px 20px; color: #bbb; }
+        .empty-state svg { width: 48px; height: 48px; stroke: #ccc; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; margin: 0 auto 12px; display: block; }
+
+        .app-content { display: none; }
+        .app-content.active { display: block; }
+
+        /* FOOTER */
+        .footer-brand {
+            text-align: center; padding: 28px 20px;
+            background: white; margin-top: 20px;
+            border-top: 4px solid var(--red);
+        }
+        .footer-logo-wrap { display: inline-block; background: white; padding: 10px 20px; border-radius: 12px; margin-bottom: 12px; }
+        .footer-logo .iber, .footer-logo .silos { font-size: 2.5rem; text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000; }
+        .footer-logo .brush-strokes { width: 40px; height: 50px; right: -6px; }
+        .footer-logo .brush-red-1 { width: 36px; height: 9px; top: 8px; right: 0; }
+        .footer-logo .brush-red-1::before { width: 10px; }
+        .footer-logo .brush-yellow { width: 30px; height: 8px; top: 22px; right: 4px; }
+        .footer-logo .brush-yellow::before { width: 9px; }
+        .footer-logo .brush-red-2 { width: 24px; height: 7px; top: 34px; right: 12px; }
+        .footer-logo .brush-red-2::before { width: 8px; }
+        .footer-text { font-weight: 600; font-size: 0.85rem; color: var(--text-dim); }
+
+        /* ===== CARICO / TARGA BUTTONS ===== */
+        .carico-btn {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 6px; padding: 12px 6px; border-radius: 10px;
+            border: 2px solid var(--border); background: white; cursor: pointer;
+            font-size: 0.72rem; font-weight: 700; text-align: center; line-height: 1.2;
+            color: var(--black); transition: all 0.15s;
+        }
+        .carico-btn:hover { border-color: var(--red); color: var(--red); }
+        .carico-btn.selected { background: var(--red); border-color: var(--red); color: white; }
+        .carico-btn svg { transition: stroke 0.15s; }
+        .carico-btn.selected svg { stroke: white; }
+
+        .targa-btn {
+            padding: 11px 6px; border-radius: 10px; border: 2px solid var(--border);
+            background: white; cursor: pointer; font-size: 0.8rem; font-weight: 800;
+            letter-spacing: 1px; font-family: 'Courier New', monospace; color: var(--black);
+            transition: all 0.15s; text-align: center;
+        }
+        .targa-btn:hover { border-color: var(--yellow); background: #fffde7; }
+        .targa-btn.selected { background: var(--yellow); border-color: var(--yellow); color: var(--black); box-shadow: 0 2px 8px rgba(255,209,0,0.4); }
+
+        /* date input */
+        .form-input {
+            width: 100%; padding: 12px 14px; border: 2px solid var(--border);
+            border-radius: 10px; font-size: 0.95rem; font-family: inherit;
+            outline: none; transition: border-color 0.2s; background: white; box-sizing: border-box;
+        }
+        .form-input:focus { border-color: var(--red); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.3); }
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="sync-bar" id="syncBar"></div>
+<div class="toast-container" id="toastContainer"></div>
+<div class="loading" id="loading"><div class="spinner"></div><div class="loading-text">Caricamento...</div></div>
+
+<div class="container">
+
+    <!-- ========== LOGIN ========== -->
+    <div id="loginPage" class="login-page">
+        <div class="login-logo">
+            <div class="logo-ibersilos logo-login">
+                <span class="iber">IBER</span>
+                <span class="silos">SILOS</span>
+                <div class="brush-strokes">
+                    <div class="brush-red-1"></div>
+                    <div class="brush-yellow"></div>
+                    <div class="brush-red-2"></div>
+                </div>
+            </div>
+            <div class="login-version">App Autista v1.0</div>
+        </div>
+
+        <div class="login-title">Area Autisti</div>
+        <div class="login-subtitle">Inserisci le tue credenziali</div>
+
+        <div class="login-form">
+            <div class="login-input-group">
+                <label class="login-label">Codice Autista</label>
+                <input type="text" class="login-input" id="loginCode" placeholder="Es: DRV001" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+            </div>
+            <div class="login-input-group">
+                <label class="login-label">Password</label>
+                <input type="password" class="login-input" id="loginPassword" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+            </div>
+            <button type="button" class="btn-login" onclick="doLogin()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Accedi
+            </button>
+        </div>
+        <div class="login-hint">Es: DRV001 · DRV002 · DRV003 · DRV004</div>
+    </div>
+
+    <!-- ========== SETUP DOCUMENTI (primo accesso) ========== -->
+    <div id="setupPage" class="login-page" style="display:none;">
+        <div class="login-logo">
+            <div class="logo-ibersilos logo-login">
+                <span class="iber">IBER</span><span class="silos">SILOS</span>
+                <div class="brush-strokes">
+                    <div class="brush-red-1"></div><div class="brush-yellow"></div><div class="brush-red-2"></div>
+                </div>
+            </div>
+        </div>
+        <div class="login-title" style="font-size:1.1rem;">Documenti del Conducente</div>
+        <div class="login-subtitle">Inserisci le scadenze dei tuoi documenti.<br>Potrai aggiornarle in qualsiasi momento.</div>
+
+        <div class="login-form" style="gap:20px;">
+            <!-- PATENTE -->
+            <div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <div style="width:34px;height:34px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-weight:800;font-size:0.92rem;color:var(--black);">Patente di Guida</div>
+                        <div style="font-size:0.72rem;color:var(--text-dim);">Data di scadenza</div>
+                    </div>
+                </div>
+                <input type="date" class="form-input" id="setupPatente" style="font-size:1rem;font-weight:700;">
+            </div>
+            <!-- CQC -->
+            <div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <div style="width:34px;height:34px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-weight:800;font-size:0.92rem;color:var(--black);">CQC</div>
+                        <div style="font-size:0.72rem;color:var(--text-dim);">Certificato Qualificazione Conducente</div>
+                    </div>
+                </div>
+                <input type="date" class="form-input" id="setupCqc" style="font-size:1rem;font-weight:700;">
+            </div>
+            <!-- CARTA TACHIGRAFICA -->
+            <div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <div style="width:34px;height:34px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-weight:800;font-size:0.92rem;color:var(--black);">Carta Tachigrafica</div>
+                        <div style="font-size:0.72rem;color:var(--text-dim);">Data di scadenza</div>
+                    </div>
+                </div>
+                <input type="date" class="form-input" id="setupTacho" style="font-size:1rem;font-weight:700;">
+            </div>
+
+            <button type="button" class="btn-login" onclick="salvaSetupDocumenti()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Salva e Continua
+            </button>
+        </div>
+    </div>
+
+    <!-- ========== APP ========== -->
+    <div id="appContent" class="app-content">
+        <input type="hidden" id="navDest" value="">
+
+        <!-- HEADER -->
+        <div class="app-header">
+            <div class="header-top">
+                <div class="logo-wrap-header">
+                    <div class="logo-ibersilos logo-header">
+                        <span class="iber">IBER</span>
+                        <span class="silos">SILOS</span>
+                        <div class="brush-strokes">
+                            <div class="brush-red-1"></div>
+                            <div class="brush-yellow"></div>
+                            <div class="brush-red-2"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="user-info">
+                    <div class="user-name" id="autistaNome">—</div>
+                    <button class="btn-logout" onclick="doLogout()">Esci</button>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div class="vehicle-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                        <span id="targaDisplay">—</span>
+                    </div>
+                    <div id="gpsLed" title="GPS" style="width:10px;height:10px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background 0.4s;box-shadow:0 0 0 3px rgba(204,204,204,0.2);"></div>
+                </div>
+                <div class="date-display" id="currentDate"></div>
+            </div>
+
+            <div class="presenza-box">
+                <div class="presenza-counter" id="giorniPresenza">0</div>
+                <div class="presenza-label">Giorni di presenza questo mese</div>
+            </div>
+
+            <div class="documenti-header" id="documentiHeader">
+                <!-- Generato da renderDocumenti() -->
+            </div>
+        </div>
+
+        <!-- NAV -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showSection('sezMissione', this)">
+                <span class="nav-tab-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                </span>
+                Missione
+            </button>
+
+            <button class="nav-tab" onclick="showSection('sezChat', this)">
+                <span class="nav-tab-icon" style="position:relative;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <span id="chatDot" style="display:none;position:absolute;top:-2px;right:-4px;width:8px;height:8px;background:var(--red);border-radius:50%;"></span>
+                </span>
+                Chat
+            </button>
+            <button class="nav-tab" onclick="showSection('sezRapportino', this)">
+                <span class="nav-tab-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+                </span>
+                Rapportino
+            </button>
+        </div>
+
+        <!-- ===== MISSIONE ===== -->
+        <div id="sezMissione" class="section active">
+
+            <!-- Banner missione attiva -->
+            <div class="missione-hero" id="missioneHero">
+                <div class="missione-id" id="missioneLabel">Nessun viaggio assegnato</div>
+                <div id="missioneRottaWrap" style="display:none;">
+                    <div class="missione-rotta">
+                        <div class="missione-citta">
+                            <div class="missione-citta-label">Partenza</div>
+                            <div class="missione-citta-nome" id="missioneDa">—</div>
+                        </div>
+                        <div class="missione-freccia"></div>
+                        <div class="missione-citta" style="text-align:right">
+                            <div class="missione-citta-label">Arrivo</div>
+                            <div class="missione-citta-nome" id="missioneA">—</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size:0.8rem;opacity:0.85;margin-top:8px;" id="missioneTargaLabel"></div>
+                <!-- Eurowag: visibile solo con missione attiva -->
+                <div id="eurowagBtn" style="display:none;margin-top:12px;">
+                    <button onclick="avviaNavi()" style="width:100%;padding:11px 16px;background:#00529B;color:white;border:none;border-radius:10px;font-size:0.85rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.3px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Avvia Eurowag Navi
+                    </button>
+                </div>
+            </div>
+
+            <!-- CARD PERCORSO (visibile solo con missione assegnata) -->
+            <div id="missionePercorsoCard" style="display:none;margin-top:8px;background:white;border-radius:12px;padding:14px 16px;border-left:4px solid var(--yellow);">
+                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:10px;">Dettaglio Percorso</div>
+
+                <!-- Rotta con tappe intermedie -->
+                <div id="percorsoTappe" style="display:none;margin-bottom:10px;"></div>
+
+                <!-- Metriche: km, durata, ETA -->
+                <div id="percorsoMetriche" style="display:none;display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;"></div>
+
+                <!-- Note dispatcher -->
+                <div id="percorsoNote" style="display:none;font-size:0.78rem;color:#555;background:#fff8e1;border-radius:8px;padding:10px 12px;line-height:1.5;border:1px solid #ffe082;"></div>
+
+                <!-- Placeholder se il DSP non ha ancora salvato il percorso dettagliato -->
+                <div id="percorsoPlaceholder" style="font-size:0.78rem;color:var(--text-dim);text-align:center;padding:8px 0;">
+                    Il dispatcher non ha ancora aggiunto dettagli percorso
+                </div>
+            </div>
+
+            <!-- INTESTAZIONE REGISTRO -->
+            <div id="fasiViaggioWrap" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;margin-top:12px;">
+                <div>
+                    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);">Fasi Viaggio</div>
+                    <div id="missioneFasiLabel" style="font-size:0.7rem;color:var(--red);font-weight:700;margin-top:2px;"></div>
+                </div>
+
+            </div>
+
+            <!-- PULSANTI TIMESTAMP -->
+            <div id="timestampButtons"></div>
+            </div><!-- /fasiViaggioWrap -->
+
+            <!-- LOG REGISTRO -->
+            <div id="registroCard" style="display:none;">
+                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:10px;">Registro</div>
+                <div class="card" style="padding:12px 16px;">
+                    <div id="registroLogs"></div>
+                </div>
+            </div>
+
+            <!-- ===== DOCUMENTI VIAGGIO (compare dopo Fine Scarico) ===== -->
+            <div id="docViaggioCard" style="display:none;margin-top:6px;">
+                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:10px;">Documenti Viaggio</div>
+
+                <!-- Slot obbligatori -->
+                <div id="docSlots"></div>
+
+
+            </div>
+
+            <!-- CHIUDI VIAGGIO banner -->
+            <div id="chiudiViaggioWrap" style="display:none;margin-top:12px;">
+                <!-- Stato sync Firebase -->
+                <div id="fbSyncStatus" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#e8f5e9;border-radius:10px;margin-bottom:12px;font-size:0.78rem;font-weight:700;color:#2e7d32;">
+                    <div id="fbDot" style="width:8px;height:8px;border-radius:50%;background:#2e7d32;animation:pulse 2s infinite;flex-shrink:0;"></div>
+                    <span id="fbSyncLabel">In attesa di connessione Firebase...</span>
+                </div>
+
+                <button id="btnChiudiViaggio" onclick="chiudiViaggio()"
+                    style="width:100%;padding:18px;background:linear-gradient(135deg,var(--red),var(--dark-red));color:white;border:3px solid var(--yellow);border-radius:14px;font-size:1rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;cursor:pointer;box-shadow:0 4px 18px rgba(227,6,19,0.35);display:flex;align-items:center;justify-content:center;gap:10px;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.21 0 4.22.8 5.78 2.12"/>
+                    </svg>
+                    CHIUDI VIAGGIO
+                </button>
+                <div style="text-align:center;font-size:0.72rem;color:var(--text-dim);margin-top:8px;">
+                    Tutti i dati saranno inviati alla centrale in tempo reale. L'operazione è irreversibile.
+                </div>
+            </div>
+
+            <!-- Missioni Terminate (storico) -->
+            <div id="missioniTerminateCard" style="display:none;margin-top:12px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer;" onclick="toggleMissioniTerminate()">
+                    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);">
+                        ✅ Missioni Terminate
+                    </div>
+                    <div id="missioniTerminateToggle" style="font-size:0.72rem;color:var(--text-dim);">▼</div>
+                </div>
+                <div id="missioniTerminateList" style="display:block;"></div>
+            </div>
+
+            <!-- Viaggio già chiuso banner -->
+            <div id="viaggioChiusoBanner" style="display:none;margin-top:12px;background:#e8f5e9;border:2px solid #a5d6a7;border-radius:14px;padding:20px;text-align:center;">
+                <div style="font-size:2.5rem;">✅</div>
+                <div style="font-weight:800;font-size:1rem;color:#2e7d32;margin-top:8px;">Viaggio Chiuso</div>
+                <div style="font-size:0.8rem;color:var(--text-dim);margin-top:4px;" id="chiusoOrario">—</div>
+                <div style="font-size:0.78rem;color:#2e7d32;margin-top:8px;font-weight:600;">Dati inviati alla centrale ✓</div>
+            </div>
+
+        </div>
+
+        <!-- ===== MAPPA ===== -->
+
+
+        <!-- ===== CHAT ===== -->
+        <div id="sezChat" class="section">
+            <div class="card" style="margin-bottom:0;">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Chat — Centrale Ibersilos
+                </div>
+                <div class="chat-wrap">
+                    <div class="chat-messages" id="chatMessages">
+
+                    </div>
+                    <div class="chat-input-wrap">
+                        <input type="text" class="chat-input" id="chatInput" placeholder="Scrivi un messaggio..." onkeydown="if(event.key==='Enter')inviaMsg()">
+                        <button class="chat-send" onclick="inviaMsg()">
+                            <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+        <!-- ===== RAPPORTINO GIORNALIERO ===== -->
+        <div id="sezRapportino" class="section">
+
+            <!-- Header data -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <div>
+                    <div style="font-size:1rem;font-weight:800;color:var(--black);" id="rapDataOggi">—</div>
+                    <div style="font-size:0.75rem;color:var(--text-dim);margin-top:2px;" id="rapTargaHeader">—</div>
+                </div>
+                <div id="rapStatoBadge" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:5px 12px;border-radius:20px;background:#fff8e1;color:#b8860b;border:1px solid var(--yellow);">Aperto</div>
+            </div>
+
+            <!-- KM TOTALI display -->
+            <div style="background:linear-gradient(135deg,var(--red),var(--dark-red));border:3px solid var(--yellow);border-radius:14px;padding:18px;text-align:center;margin-bottom:16px;box-shadow:0 4px 14px rgba(227,6,19,0.22);">
+                <div style="font-size:2.8rem;font-weight:800;color:white;line-height:1;" id="rapKmTotali">0</div>
+                <div style="font-size:0.78rem;color:rgba(255,255,255,0.85);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;">KM Totali Giornata</div>
+            </div>
+
+            <!-- SOSTA NOTTURNA (visibile solo dopo chiusura) -->
+            <div id="sostaBox" style="display:none;background:white;border:3px solid var(--yellow);border-left:4px solid var(--red);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;">
+                <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--red);margin-bottom:10px;">Sosta Notturna</div>
+                <div style="font-size:3.5rem;margin:8px 0;" id="sostaFlag">🏳️</div>
+                <div style="font-size:1.2rem;font-weight:800;" id="sostaPaese">—</div>
+                <div style="margin-top:10px;display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:25px;font-weight:700;font-size:0.9rem;" id="trasfertaBadge">—</div>
+            </div>
+
+            <!-- CARD TRATTE -->
+            <div class="card" style="margin-bottom:14px;">
+                <div class="card-title" style="justify-content:space-between;">
+                    <span style="display:flex;align-items:center;gap:8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+                        Tratte
+                    </span>
+                    <span style="background:var(--yellow);color:var(--black);font-size:0.72rem;font-weight:800;padding:2px 10px;border-radius:12px;" id="rapCountTratte">0</span>
+                </div>
+                <div id="listaTratte" style="margin-bottom:10px;"></div>
+                <button class="btn-secondary full" id="btnAggiungiTratta" onclick="apriModalTratta()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Aggiungi Tratta
+                </button>
+            </div>
+
+            <!-- CARD RIFORNIMENTI -->
+            <div class="card" style="margin-bottom:14px;">
+                <div class="card-title" style="justify-content:space-between;">
+                    <span style="display:flex;align-items:center;gap:8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22V8l9-6 9 6v14H3z"/><path d="M12 22V12h-3v10"/><path d="M15 22V12h-3"/><rect x="9" y="12" width="6" height="10"/></svg>
+                        Rifornimenti
+                    </span>
+                    <span style="background:var(--yellow);color:var(--black);font-size:0.72rem;font-weight:800;padding:2px 10px;border-radius:12px;" id="rapCountRif">0</span>
+                </div>
+                <div id="listaRifornimenti" style="margin-bottom:10px;"></div>
+                <button class="btn-secondary full" id="btnAggiungiRif" onclick="apriModalRif()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Aggiungi Rifornimento
+                </button>
+            </div>
+
+            <!-- NOTE -->
+            <div class="card" style="margin-bottom:16px;">
+                <div class="card-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Note Giornata
+                </div>
+                <textarea id="rapNote" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;resize:vertical;min-height:80px;font-family:inherit;outline:none;transition:border-color 0.2s;" placeholder="Annotazioni, problemi, consegne particolari..." oninput="salvaNoteDraft()" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+            </div>
+
+            <!-- BOTTONE CHIUSURA -->
+            <button class="btn-primary yellow" id="btnChiudiRapportino" onclick="chiudiRapportino()" style="margin-bottom:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                CHIUDI RAPPORTINO & SALVA
+            </button>
+            <button id="btnSoloTrasferta" onclick="chiudiSoloTrasferta()" style="display:none;width:100%;padding:14px;margin-bottom:8px;background:white;color:var(--black);border:2px solid var(--yellow);border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;display:none;align-items:center;justify-content:center;gap:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                SOLO TRASFERTA (nessuna guida)
+            </button>
+            <div style="text-align:center;font-size:0.78rem;color:var(--text-dim);margin-bottom:20px;">
+                Il GPS rileverà automaticamente il paese della sosta notturna
+            </div>
+
+            <!-- STORICO RAPPORTINI -->
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:10px;">Storico Rapportini</div>
+            <div id="storicoRapportini"></div>
+
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer-brand">
+            <div class="footer-logo-wrap">
+                <div class="logo-ibersilos footer-logo">
+                    <span class="iber">IBER</span>
+                    <span class="silos">SILOS</span>
+                    <div class="brush-strokes">
+                        <div class="brush-red-1"></div>
+                        <div class="brush-yellow"></div>
+                        <div class="brush-red-2"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-text">App Autista · <span id="footerNome">—</span></div>
+        </div>
+
+    </div><!-- /appContent -->
+</div><!-- /container -->
+
+
+<!-- MODAL AGGIUNGI TRATTA -->
+<div id="modalTratta" class="modal">
+    <div class="modal-content">
+        <div class="sheet-handle"></div>
+        <div class="modal-header">
+            <h2 class="modal-title">Aggiungi Tratta</h2>
+            <button class="modal-close" onclick="chiudiModal('modalTratta')">&times;</button>
+        </div>
+
+        <!-- Da / A -->
+        <div class="input-row" style="margin-bottom:14px;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Da *</label>
+                <input type="text" class="form-input" id="trattaDa" placeholder="Partenza">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">A *</label>
+                <input type="text" class="form-input" id="trattaA" placeholder="Arrivo">
+            </div>
+        </div>
+
+        <!-- KM -->
+        <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">KM *</label>
+            <input type="number" class="form-input" id="trattaKm" placeholder="0" min="0" style="font-size:1.2rem;font-weight:800;text-align:center;">
+        </div>
+
+        <!-- Tipo Carico -->
+        <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Tipo Carico *</label>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+                <button type="button" class="carico-btn" id="btn-cisterna-carica" onclick="selezionaCarico('CISTERNA CARICA')">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
+                    <span>Cisterna<br>Carica</span>
+                </button>
+                <button type="button" class="carico-btn" id="btn-cisterna-vuota" onclick="selezionaCarico('CISTERNA VUOTA')">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/><line x1="3" y1="5" x2="21" y2="19" stroke-dasharray="2 2" opacity="0.4"/></svg>
+                    <span>Cisterna<br>Vuota</span>
+                </button>
+                <button type="button" class="carico-btn" id="btn-container" onclick="selezionaCarico('CONTAINER')">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="13" rx="1"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="8" y1="12" x2="8" y2="17"/><line x1="16" y1="12" x2="16" y2="17"/></svg>
+                    <span>Container</span>
+                </button>
+            </div>
+            <input type="hidden" id="trattaCarico" value="">
+        </div>
+
+        <!-- Targa cisterna (visibile per CISTERNA CARICA / VUOTA) -->
+        <div id="blockCisterna" style="display:none;margin-bottom:14px;">
+            <label class="form-label">Targa Cisterna *</label>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+                <button type="button" class="targa-btn" id="targa-AC62180" onclick="selezionaTarga('AC62180')">AC62180</button>
+                <button type="button" class="targa-btn" id="targa-AD32650" onclick="selezionaTarga('AD32650')">AD32650</button>
+                <button type="button" class="targa-btn" id="targa-AD32598" onclick="selezionaTarga('AD32598')">AD32598</button>
+            </div>
+            <input type="hidden" id="trattaTarga" value="">
+        </div>
+
+        <!-- Campi Container (visibili solo per CONTAINER) -->
+        <div id="blockContainer" style="display:none;margin-bottom:14px;">
+            <div class="form-group" style="margin-bottom:10px;">
+                <label class="form-label">Targa Rimorchio *</label>
+                <input type="text" class="form-input" id="containerRimorchio" placeholder="Es. AB123CD" style="text-transform:uppercase;letter-spacing:1px;font-weight:700;">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Numero ISO Container *</label>
+                <input type="text" class="form-input" id="containerISO" placeholder="Es. MSCU1234567" style="text-transform:uppercase;letter-spacing:1px;font-weight:700;font-family:monospace;">
+            </div>
+        </div>
+
+        <!-- Note -->
+        <div class="form-group" style="margin-bottom:20px;">
+            <label class="form-label">Note tratta</label>
+            <input type="text" class="form-input" id="trattaNote" placeholder="Opzionale">
+        </div>
+
+        <div class="input-row">
+            <button class="btn-secondary" onclick="chiudiModal('modalTratta')">Annulla</button>
+            <button class="btn-primary" style="margin:0;" onclick="salvaTratta()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Aggiungi
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL AGGIUNGI RIFORNIMENTO -->
+<div id="modalRif" class="modal">
+    <div class="modal-content">
+        <div class="sheet-handle"></div>
+        <div class="modal-header">
+            <h2 class="modal-title">Aggiungi Rifornimento</h2>
+            <button class="modal-close" onclick="chiudiModal('modalRif')">&times;</button>
+        </div>
+
+        <!-- Tipo carburante -->
+        <div class="form-group" style="margin-bottom:16px;">
+            <label class="form-label">Tipo Carburante *</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <button type="button" class="carico-btn" id="btn-gasolio" onclick="selezionaCarburante('GASOLIO')" style="padding:16px 10px;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 22V8l6-6h6l3 3v3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-1v4H3z"/>
+                        <path d="M9 2v6H3"/>
+                        <line x1="9" y1="14" x2="15" y2="14"/>
+                    </svg>
+                    <span style="font-size:0.85rem;">🛢️ Gasolio</span>
+                </button>
+                <button type="button" class="carico-btn" id="btn-adblue" onclick="selezionaCarburante('ADBLUE')" style="padding:16px 10px;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2C6 8 4 12 4 14a8 8 0 0 0 16 0c0-2-2-6-8-12z"/>
+                        <path d="M9 17a3 3 0 0 0 6 0"/>
+                    </svg>
+                    <span style="font-size:0.85rem;">💧 AdBlue</span>
+                </button>
+            </div>
+            <input type="hidden" id="rifTipo" value="">
+        </div>
+
+        <!-- Litri e Prezzo -->
+        <div class="input-row" style="margin-bottom:16px;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Litri *</label>
+                <input type="number" class="form-input" id="rifLitri" placeholder="0" min="0" step="0.1"
+                    style="font-size:1.1rem;font-weight:800;text-align:center;"
+                    oninput="calcolaImporto()">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">€/Litro *</label>
+                <input type="number" class="form-input" id="rifPrezzo" placeholder="0.000" min="0" step="0.001"
+                    style="font-size:1.1rem;font-weight:800;text-align:center;"
+                    oninput="calcolaImporto()">
+            </div>
+        </div>
+
+        <!-- Totale calcolato -->
+        <div id="rifTotaleBox" style="display:none;background:linear-gradient(135deg,var(--red),var(--dark-red));border-radius:10px;padding:14px;text-align:center;margin-bottom:16px;border:2px solid var(--yellow);">
+            <div style="font-size:0.72rem;color:rgba(255,255,255,0.8);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">Totale</div>
+            <div style="font-size:2rem;font-weight:800;color:white;line-height:1.2;" id="rifTotaleVal">€ 0.00</div>
+        </div>
+
+        <!-- SCAN SCONTRINO - obbligatorio -->
+        <div class="form-group" style="margin-bottom:20px;">
+            <label class="form-label">
+                Scan Scontrino *
+                <span style="background:var(--red);color:white;font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:5px;letter-spacing:0.5px;">OBBLIGATORIO</span>
+            </label>
+
+            <!-- Zona scan con 2 opzioni — input SEPARATI per camera/galleria -->
+            <div id="rifScontrinoZoneWrap">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                    <!-- Bottone CAMERA: capture=environment forza apertura camera -->
+                    <label for="inputScan" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 8px;border:2px dashed var(--border);border-radius:12px;cursor:pointer;background:white;text-align:center;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--border)'">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                            <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                        <span style="font-size:0.78rem;font-weight:700;color:var(--black);">📷 Camera</span>
+                        <span style="font-size:0.66rem;color:var(--text-dim);">Scatta foto</span>
+                    </label>
+                    <!-- Bottone GALLERIA: nessun capture, apre file picker -->
+                    <label for="inputGallery" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 8px;border:2px dashed var(--border);border-radius:12px;cursor:pointer;background:white;text-align:center;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--yellow)'" onmouseout="this.style.borderColor='var(--border)'">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <span style="font-size:0.78rem;font-weight:700;color:var(--black);">🖼️ Galleria</span>
+                        <span style="font-size:0.66rem;color:var(--text-dim);">Da album / PDF</span>
+                    </label>
+                </div>
+                <!-- Due input separati: camera con capture, galleria senza -->
+                <input type="file" id="inputScan" accept="image/*" capture="environment" style="display:none;" onchange="gestisciScontrino(this)">
+                <input type="file" id="inputGallery" accept="image/*,application/pdf" style="display:none;" onchange="gestisciScontrino(this)">
+                <div style="font-size:0.68rem;color:var(--text-dim);text-align:center;margin-top:2px;">JPG · PNG · PDF</div>
+            </div>
+
+            <!-- Preview scontrino -->
+            <div id="rifScontrinoPreview" style="display:none;margin-top:10px;position:relative;">
+                <img id="rifScontrinoImg" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;border:2px solid var(--green);background:#f8f8f8;" />
+                <button onclick="rimuoviScontrino()" style="position:absolute;top:8px;right:8px;background:var(--red);color:white;border:none;border-radius:50%;width:30px;height:30px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,0.2);">×</button>
+                <div style="font-size:0.72rem;color:var(--green);font-weight:700;margin-top:6px;display:flex;align-items:center;gap:5px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span id="rifScontrinoLabel">Documento allegato</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-row">
+            <button class="btn-secondary" onclick="chiudiModal('modalRif')">Annulla</button>
+            <button class="btn-primary" style="margin:0;" onclick="salvaRifornimento()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Aggiungi
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL MODIFICA SCADENZA DOCUMENTO -->
+<div id="modalEditDoc" class="modal">
+    <div class="modal-content">
+        <div class="sheet-handle"></div>
+        <div class="modal-header">
+            <h2 class="modal-title" id="editDocTitolo">Scadenza</h2>
+            <button class="modal-close" onclick="chiudiModal('modalEditDoc')">&times;</button>
+        </div>
+        <input type="hidden" id="editDocKey">
+        <div class="form-group" style="margin-bottom:24px;">
+            <label class="form-label">Data di scadenza</label>
+            <input type="date" class="form-input" id="editDocData" style="font-size:1.1rem;font-weight:700;">
+        </div>
+        <div class="input-row">
+            <button class="btn-secondary" onclick="chiudiModal('modalEditDoc')">Annulla</button>
+            <button class="btn-primary" style="margin:0;" onclick="salvaEditDoc()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Salva
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DETTAGLIO RAPPORTINO STORICO -->
+<div id="modalDettaglioRap" class="modal">
+    <div class="modal-content">
+        <div class="sheet-handle"></div>
+        <div class="modal-header">
+            <h2 class="modal-title" id="dettaglioRapTitolo">Rapportino</h2>
+            <button class="modal-close" onclick="chiudiModal('modalDettaglioRap')">&times;</button>
+        </div>
+        <div id="dettaglioRapContent"></div>
+    </div>
+</div>
+
+<!-- MODAL CONFERMA FASE -->
+<div id="modalConfermaFase" class="modal">
+    <div class="modal-content">
+        <div class="sheet-handle"></div>
+        <div class="modal-header">
+            <h2 class="modal-title" id="confermaFaseTitle">Confermare?</h2>
+            <button class="modal-close" onclick="chiudiModal('modalConfermaFase')">&times;</button>
+        </div>
+        <p style="color:var(--text-dim);margin-bottom:6px;" id="confermaFaseBody"></p>
+        <div style="background:#fff8e1;border:1px solid var(--yellow);border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:0.82rem;color:#7a5f00;font-weight:600;">
+            ⚠️ Questa azione registrerà data e ora esatte e non potrà essere modificata.
+        </div>
+        <div class="input-row">
+            <button class="btn-secondary" onclick="chiudiModal('modalConfermaFase')">Annulla</button>
+            <button class="btn-primary" style="margin:0;" onclick="eseguiFase()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Registra ora
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- jsPDF CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- ═══════════════════════════ SCANNER MODAL ══════════════════════════ -->
+<div id="scannerModal" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;flex-direction:column;">
+  <div style="background:rgba(0,0,0,0.92);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.1);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button onclick="scannerChiudi()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">&times;</button>
+      <div>
+        <div style="color:white;font-weight:800;font-size:0.95rem;">&#128196; Scanner Documento</div>
+        <div style="display:flex;gap:8px;margin-top:2px;">
+          <span id="scanCountLabel" style="color:rgba(255,255,255,0.5);font-size:0.68rem;">0 pagine</span>
+          <span id="scanMissionLabel" style="color:#FFD100;font-size:0.68rem;font-weight:700;"></span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button id="btnFlash" onclick="scannerToggleFlash()" style="display:none;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;padding:6px 12px;border-radius:20px;font-size:0.72rem;font-weight:700;cursor:pointer;">&#9889;</button>
+      <button id="btnScanExport" onclick="scannerEsporta()" style="display:none;background:#E30613;border:none;color:white;padding:8px 16px;border-radius:20px;font-size:0.78rem;font-weight:700;cursor:pointer;">&#128229; Salva PDF</button>
+    </div>
+  </div>
+  <div id="scanStepCamera" style="flex:1;display:flex;flex-direction:column;">
+    <div style="flex:1;position:relative;overflow:hidden;background:#111;">
+      <video id="scanVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
+      <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <rect x="7" y="7" width="86" height="86" fill="rgba(227,6,19,0.04)" rx="1"/>
+        <polyline points="7,20 7,7 20,7"     fill="none" stroke="#E30613" stroke-width="1.5" stroke-linecap="round"/>
+        <polyline points="80,7 93,7 93,20"   fill="none" stroke="#E30613" stroke-width="1.5" stroke-linecap="round"/>
+        <polyline points="7,80 7,93 20,93"   fill="none" stroke="#E30613" stroke-width="1.5" stroke-linecap="round"/>
+        <polyline points="80,93 93,93 93,80" fill="none" stroke="#E30613" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <canvas id="scanCanvas" style="display:none;"></canvas>
+      <div style="position:absolute;bottom:12px;left:0;right:0;text-align:center;pointer-events:none;">
+        <span style="background:rgba(0,0,0,0.65);color:white;padding:6px 14px;border-radius:20px;font-size:0.72rem;font-weight:600;">Posiziona il documento nel riquadro</span>
+      </div>
+      <div id="scanFlashAnim" style="position:absolute;inset:0;background:white;opacity:0;pointer-events:none;transition:opacity 0.08s;"></div>
+    </div>
+    <div style="background:#111;padding:16px;display:flex;align-items:center;justify-content:center;gap:20px;flex-shrink:0;">
+      <div id="scanThumbs" style="display:flex;gap:6px;overflow-x:auto;max-width:180px;align-items:center;min-height:52px;"></div>
+      <button onclick="scannerScatta()" style="width:68px;height:68px;border-radius:50%;background:white;border:4px solid #E30613;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(227,6,19,0.25);flex-shrink:0;">
+        <div style="width:52px;height:52px;background:#E30613;border-radius:50%;pointer-events:none;"></div>
+      </button>
+      <div style="min-width:68px;"></div>
+    </div>
+  </div>
+  <div id="scanStepReview" style="flex:1;display:none;flex-direction:column;background:#111;">
+    <div style="flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#1a1a1a;padding:8px;">
+      <canvas id="scanReviewCanvas" style="max-width:100%;max-height:100%;display:block;border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,0.6);"></canvas>
+    </div>
+    <div style="background:#1a1a1a;border-top:1px solid rgba(255,255,255,0.1);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="display:flex;gap:8px;">
+        <button id="filterAuto"  onclick="scannerFiltro('auto')"  style="padding:7px 13px;background:#E30613;border:none;color:white;border-radius:20px;font-size:0.72rem;font-weight:700;cursor:pointer;">Auto</button>
+        <button id="filterBW"    onclick="scannerFiltro('bw')"    style="padding:7px 13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:20px;font-size:0.72rem;font-weight:700;cursor:pointer;">B&amp;N</button>
+        <button id="filterColor" onclick="scannerFiltro('color')" style="padding:7px 13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:20px;font-size:0.72rem;font-weight:700;cursor:pointer;">Colore</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="scannerRipeti()" style="padding:8px 14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:20px;font-size:0.72rem;font-weight:700;cursor:pointer;">&#x1F504; Ritira</button>
+        <button onclick="scannerConferma()" style="padding:8px 18px;background:#28a745;border:none;color:white;border-radius:20px;font-size:0.78rem;font-weight:800;cursor:pointer;">&#10003; Aggiungi</button>
+      </div>
+    </div>
+  </div>
+  <div id="scanExportOverlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:10;">
+    <div style="color:white;font-weight:800;font-size:1rem;">Creazione PDF...</div>
+    <div style="width:220px;background:rgba(255,255,255,0.2);border-radius:4px;height:6px;overflow:hidden;">
+      <div id="scanExportBar" style="height:100%;background:#E30613;width:0%;transition:width 0.25s;border-radius:4px;"></div>
+    </div>
+    <div id="scanExportLbl" style="color:rgba(255,255,255,0.65);font-size:0.8rem;"></div>
+  </div>
+</div>
+<!-- END SCANNER MODAL -->
+
+
+
+<!-- MODAL NAVIGAZIONE — Apri app o store -->
+
+
+
+
+
+<script src="app.js"></script>
+</body>
+</html>
