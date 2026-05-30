@@ -12,7 +12,8 @@ var firebaseConfig = {
       firebase.initializeApp(firebaseConfig);
       var _db      = firebase.database();
       var _storage = firebase.storage();
-      var _auth    = firebase.auth();
+      var _auth;
+      try { _auth = firebase.auth(); } catch(e) { _auth = null; }
 
       // Adatta API compat alla stessa interfaccia usata dal codice principale
       window._fb = {
@@ -34,10 +35,16 @@ var firebaseConfig = {
         getDownloadURL: function(ref) { return ref.getDownloadURL(); }
       };
       // Autenticazione anonima — prerequisito per Firebase Rules
-      _auth.signInAnonymously().catch(function() {}).finally(function() {
+      // Usa then(ok,err) invece di finally() per compatibilità Android WebView
+      function _fbDispatchReady() {
         window._fbReady = true;
         document.dispatchEvent(new Event('firebase-ready'));
-      });
+      }
+      if (_auth) {
+        _auth.signInAnonymously().then(_fbDispatchReady, _fbDispatchReady);
+      } else {
+        _fbDispatchReady();
+      }
 
 // === Block from L1307 ===
 // ====== GLOBALS (shared across both script blocks) ======
