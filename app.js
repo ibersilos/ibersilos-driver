@@ -47,6 +47,16 @@ var firebaseConfig = {
       }
 
 // === Block from L1307 ===
+
+// ====== DEBUG MOBILE — mostra errori JS sullo schermo ======
+function _dbg(msg) {
+    var el = document.getElementById('dbgBox');
+    if (el) { el.style.display = 'block'; el.textContent = msg; }
+}
+window.onerror = function(msg, src, line) {
+    _dbg('ERR L' + line + ': ' + msg);
+};
+
 // ====== GLOBALS (shared across both script blocks) ======
 var missioneCorrente = null;  // dichiarata qui, usata da tsKey() e da initFirebase()
 
@@ -1585,24 +1595,28 @@ function salvaSetupDocumenti() {
 
 // ====== LOGIN ======
 function doLogin() {
-    const code = document.getElementById('loginCode').value.trim().toUpperCase();
-    const pass = document.getElementById('loginPassword').value;
-    const driver = demoDrivers[code];
-    if (!driver || driver.password !== pass) {
-        const inputs = document.querySelectorAll('.login-input');
-        inputs.forEach(i => { i.style.borderColor = 'var(--red)'; setTimeout(()=>i.style.borderColor='', 1500); });
-        showToast('Credenziali non valide', 'Controlla codice e password', 'error');
-        return;
-    }
-    currentDriver = { code, ...driver };
-    localStorage.setItem('ibsDriver', JSON.stringify(currentDriver));
-    // Primo accesso? Chiedi documenti
-    if (!loadDocs(driver.targa)) {
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('setupPage').style.display = '';
-    } else {
-        avviaApp(currentDriver);
-    }
+    try {
+        const code = document.getElementById('loginCode').value.trim().toUpperCase();
+        const pass = document.getElementById('loginPassword').value;
+        _dbg('code=' + code + ' drivers=' + (typeof demoDrivers));
+        const driver = demoDrivers[code];
+        if (!driver || driver.password !== pass) {
+            const inputs = document.querySelectorAll('.login-input');
+            inputs.forEach(i => { i.style.borderColor = 'var(--red)'; setTimeout(()=>i.style.borderColor='', 1500); });
+            _dbg('FAIL: code=' + code + ' found=' + !!driver);
+            showToast('Credenziali non valide', 'Controlla codice e password', 'error');
+            return;
+        }
+        currentDriver = { code, ...driver };
+        localStorage.setItem('ibsDriver', JSON.stringify(currentDriver));
+        // Primo accesso? Chiedi documenti
+        if (!loadDocs(driver.targa)) {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('setupPage').style.display = '';
+        } else {
+            avviaApp(currentDriver);
+        }
+    } catch(e) { _dbg('doLogin ERR: ' + e.message); }
 }
 
 function avviaApp(driver) {
