@@ -48,15 +48,6 @@ var firebaseConfig = {
 
 // === Block from L1307 ===
 
-// ====== DEBUG MOBILE — mostra errori JS sullo schermo ======
-function _dbg(msg) {
-    var el = document.getElementById('dbgBox');
-    if (el) { el.style.display = 'block'; el.textContent = msg; }
-}
-window.onerror = function(msg, src, line) {
-    _dbg('ERR L' + line + ': ' + msg);
-};
-
 // ====== GLOBALS (shared across both script blocks) ======
 var missioneCorrente = null;  // dichiarata qui, usata da tsKey() e da initFirebase()
 
