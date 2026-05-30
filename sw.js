@@ -1,15 +1,8 @@
-const CACHE = 'ibersilos-drv-v1';
-const APP_SHELL = [
-    '/ibersilos-driver/',
-    '/ibersilos-driver/index.html',
-    '/ibersilos-driver/app.js',
-    '/ibersilos-driver/logo.jpg',
-];
+const CACHE = 'ibersilos-drv-v3';
+const STATIC = ['/ibersilos-driver/logo.jpg'];
 
 self.addEventListener('install', e => {
-    e.waitUntil(
-        caches.open(CACHE).then(c => c.addAll(APP_SHELL))
-    );
+    e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)));
     self.skipWaiting();
 });
 
@@ -22,16 +15,20 @@ self.addEventListener('activate', e => {
     self.clients.claim();
 });
 
-// Cache-first per app shell, network-first per tutto il resto (Firebase, CDN)
+// Network-first: aggiornamenti sempre applicati, cache come fallback offline
 self.addEventListener('fetch', e => {
+    if (e.request.method !== 'GET') return;
     const url = new URL(e.request.url);
-    const isAppShell = url.origin === self.location.origin &&
-        APP_SHELL.some(p => url.pathname === p || url.pathname.startsWith('/ibersilos-driver/') && e.request.destination === 'document');
+    // Solo risorse dello stesso origin (non Firebase, CDN esterni)
+    if (url.origin !== self.location.origin) return;
 
-    if (isAppShell) {
-        e.respondWith(
-            caches.match(e.request).then(cached => cached || fetch(e.request))
-        );
-    }
-    // Firebase, gstatic, CDN esterni → pass-through (non mettere in cache)
+    e.respondWith(
+        fetch(e.request)
+            .then(res => {
+                const clone = res.clone();
+                caches.open(CACHE).then(c => c.put(e.request, clone));
+                return res;
+            })
+            .catch(() => caches.match(e.request))
+    );
 });
