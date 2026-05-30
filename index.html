@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob: filesystem: about: ws: wss:; script-src * 'self' 'unsafe-inline' 'unsafe-eval'; connect-src * 'self'; img-src * 'self' data: blob:; frame-src *; style-src * 'self' 'unsafe-inline';">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ibersilos">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%231A1A1A'/%3E%3Ctext x='96' y='130' font-family='Arial Black' font-size='90' font-weight='900' fill='white' text-anchor='middle'%3EIS%3C/text%3E%3Crect x='20' y='140' width='152' height='14' fill='%23E30613' rx='4'/%3E%3C/svg%3E">
-    <!-- manifest rimosso per APK -->
+    <meta name="theme-color" content="#E30613">
+    <link rel="apple-touch-icon" href="logo.jpg">
+    <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ibersilos — App Autista</title>
     <!-- Firebase SDK -->
@@ -1226,5 +1230,10 @@
 
 
 <script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/ibersilos-driver/sw.js');
+}
+</script>
 </body>
 </html>
