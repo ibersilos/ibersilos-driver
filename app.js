@@ -12,6 +12,7 @@ var firebaseConfig = {
       firebase.initializeApp(firebaseConfig);
       var _db      = firebase.database();
       var _storage = firebase.storage();
+      var _auth    = firebase.auth();
 
       // Adatta API compat alla stessa interfaccia usata dal codice principale
       window._fb = {
@@ -32,8 +33,11 @@ var firebaseConfig = {
         uploadBytes:    function(ref, blob) { return ref.put(blob); },
         getDownloadURL: function(ref) { return ref.getDownloadURL(); }
       };
-      window._fbReady = true;
-      document.dispatchEvent(new Event('firebase-ready'));
+      // Autenticazione anonima — prerequisito per Firebase Rules
+      _auth.signInAnonymously().catch(function() {}).finally(function() {
+        window._fbReady = true;
+        document.dispatchEvent(new Event('firebase-ready'));
+      });
 
 // === Block from L1307 ===
 // ====== GLOBALS (shared across both script blocks) ======
@@ -1007,7 +1011,7 @@ let fbUnsubscribers = [];
 
 function fbPath(targa) {
     // Sanitize targa for Firebase path (no dots/slashes)
-    return 'viaggi/' + targa.replace(/[.#$[\]]/g, '_');
+    return 'viaggi_sv/' + targa.replace(/[.#$[\]]/g, '_');
 }
 
 // Missione corrente assegnata dal dispatcher
@@ -2386,7 +2390,7 @@ async function inviaGPSFirebase(lat, lng, acc) {
         code:    currentDriver.code,
     };
     try {
-        await set(ref(db, 'gps/' + currentDriver.targa), payload);
+        await set(ref(db, 'gps_sv/' + currentDriver.targa), payload);
         gpsLastLat    = lat;
         gpsLastLng    = lng;
         gpsLastAcc    = acc;
