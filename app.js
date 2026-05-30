@@ -1384,7 +1384,10 @@ async function pushToFirebase(targa) {
         timestamps: ts,
         documenti: docsMetadata,
         // GPS: usa ultima posizione nota se disponibile
-        ...(gpsLastLat ? { lat: gpsLastLat, lng: gpsLastLng, gpsAcc: Math.round(gpsLastAcc||0), gpsTs: gpsLastUpdate?.getTime() } : {}),
+        lat: gpsLastLat || null,
+        lng: gpsLastLng || null,
+        gpsAcc: gpsLastLat ? Math.round(gpsLastAcc||0) : null,
+        gpsTs: (gpsLastLat && gpsLastUpdate) ? gpsLastUpdate.getTime() : null,
     };
 
     try {
@@ -1607,7 +1610,7 @@ function doLogin() {
             showToast('Credenziali non valide', 'Controlla codice e password', 'error');
             return;
         }
-        currentDriver = { code, ...driver };
+        currentDriver = Object.assign({}, driver, { code: code });
         localStorage.setItem('ibsDriver', JSON.stringify(currentDriver));
         // Primo accesso? Chiedi documenti
         if (!loadDocs(driver.targa)) {
@@ -1939,11 +1942,9 @@ function salvaTratta() {
     }
 
     const rap = loadRapportino(currentDriver.targa);
-    rap.tratte.push({
-        da, a, km, carico, note,
-        ...extra,
-        ora: new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'})
-    });
+    var _tratta = Object.assign({ da: da, a: a, km: km, carico: carico, note: note }, extra || {});
+    _tratta.ora = new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+    rap.tratte.push(_tratta);
     rap.kmTotali = rap.tratte.reduce((s, t) => s + t.km, 0);
     saveRapportino(rap);
     chiudiModal('modalTratta');
@@ -2176,8 +2177,8 @@ async function finalizzaRapportino(rap, lat, lng) {
             // Nominatim OpenStreetMap - free, no API key
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=it`);
             const data = await res.json();
-            const codice = data.address?.country_code?.toUpperCase() || '??';
-            const info = PAESI_INFO[codice] || { nome: data.address?.country || 'Sconosciuto', flag: '🏳️' };
+            const codice = (data.address && data.address.country_code ? data.address.country_code.toUpperCase() : '??');
+            const info = PAESI_INFO[codice] || { nome: (data.address && data.address.country) || 'Sconosciuto', flag: '🏳️' };
             sostaNotturna = { paese: info.nome, codice, flag: info.flag, lat, lng };
         } catch(e) {
             sostaNotturna = { paese: 'Errore rilevamento', codice: '??', flag: '🏳️' };
@@ -2456,7 +2457,7 @@ async function avviaGPSTracking() {
     // ── MODALITÀ 1: Plugin nativo Capacitor (APK) ──
     // Il Foreground Service Android mantiene il GPS attivo anche
     // con schermo spento — nessuna sospensione possibile
-    const cap = window.Capacitor?.Plugins?.IbsLocation;
+    const cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IbsLocation;
     if (cap) {
         try {
             await cap.startTracking();
@@ -2542,7 +2543,7 @@ async function avviaGPSTracking() {
 
 async function fermaGPSTracking() {
     // Ferma plugin nativo se attivo
-    const cap = window.Capacitor?.Plugins?.IbsLocation;
+    const cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IbsLocation;
     if (cap) {
         try { await cap.stopTracking(); } catch(e) {}
         try { cap.removeAllListeners(); } catch(e) {}
