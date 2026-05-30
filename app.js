@@ -1592,12 +1592,10 @@ function doLogin() {
     try {
         const code = document.getElementById('loginCode').value.trim().toUpperCase();
         const pass = document.getElementById('loginPassword').value;
-        _dbg('code=' + code + ' drivers=' + (typeof demoDrivers));
         const driver = demoDrivers[code];
         if (!driver || driver.password !== pass) {
             const inputs = document.querySelectorAll('.login-input');
             inputs.forEach(i => { i.style.borderColor = 'var(--red)'; setTimeout(()=>i.style.borderColor='', 1500); });
-            _dbg('FAIL: code=' + code + ' found=' + !!driver);
             showToast('Credenziali non valide', 'Controlla codice e password', 'error');
             return;
         }
@@ -1610,7 +1608,7 @@ function doLogin() {
         } else {
             avviaApp(currentDriver);
         }
-    } catch(e) { _dbg('doLogin ERR: ' + e.message); }
+    } catch(e) { showToast('Errore login', e.message, 'error'); }
 }
 
 function avviaApp(driver) {
