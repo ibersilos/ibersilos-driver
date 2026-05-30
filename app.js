@@ -2409,6 +2409,8 @@ async function inviaGPSFirebase(lat, lng, acc) {
         acc: Math.round(acc || 0),
         ts: Date.now(),
         autista: currentDriver.nome,
+        nome:    currentDriver.nome,
+        targa:   currentDriver.targa,
         code:    currentDriver.code,
     };
     try {
