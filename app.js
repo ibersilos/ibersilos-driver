@@ -2306,8 +2306,46 @@ function showSection(id, btn) {
 // Struttura: chat/{driverCode}/{pushId} = { from, text, time, mine, ts }
 let chatMsgCount = 0; // per tracciare non letti
 
+// ── Audio ding ────────────────────────────────────────────────────
+function playDing() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.4, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.5);
+    } catch(e) {}
+}
+
+// ── Notifiche Push browser ────────────────────────────────────────
+function richiediPermessoNotifiche() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') Notification.requestPermission();
+}
+
+function inviaNotificaPush(testo) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+        const n = new Notification('📨 Centrale', {
+            body: testo,
+            icon: '/logo.jpeg',
+            tag: 'chat-centrale',
+            renotify: true,
+            silent: true
+        });
+        setTimeout(() => n.close(), 6000);
+    } catch(e) {}
+}
+
 function initChatDriver() {
     if (!window._fbReady || !window._fb || !currentDriver) return;
+    richiediPermessoNotifiche();
     const { db, ref, onValue } = window._fb;
     const chatPath = 'chat/' + currentDriver.code;
     onValue(ref(db, chatPath), (snap) => {
@@ -2318,12 +2356,18 @@ function initChatDriver() {
             : Object.values(data).filter(Boolean);
         msgs.sort((a,b) => (a.ts||0)-(b.ts||0));
         renderChatMessages(msgs);
-        // Notifica punto rosso se ci sono nuovi messaggi non letti
+        // Messaggi dalla Centrale (non dal driver stesso)
         const fromCentrale = msgs.filter(m => !currentDriver ||
             (m.from !== currentDriver.nome && m.from !== currentDriver.code));
         if (fromCentrale.length > chatMsgCount) {
             const dot = document.getElementById('chatDot');
             if (dot) dot.style.display = 'block';
+            // Ding + notifica push per ogni nuovo messaggio
+            const nuovi = fromCentrale.slice(chatMsgCount);
+            nuovi.forEach(m => {
+                playDing();
+                if (document.hidden) inviaNotificaPush(m.text);
+            });
         }
         chatMsgCount = fromCentrale.length;
     });
