@@ -56,7 +56,7 @@ const demoDrivers = {
     'DRV001': { nome: 'Marco Porcu',        targa: 'HC604HC', password: '1975' },
     'DRV002': { nome: 'Sergiu Rotaru',      targa: 'GS811CG', password: '1968' },
     'DRV003': { nome: 'Wlady Manente',      targa: 'GS812CG', password: '1975' },
-    'DRV004': { nome: 'Alessandro Chiarin', targa: 'GN957JX', password: '1974' },
+    'DRV004': { nome: 'Alessandro Chiarin', targa: 'HD562HG', password: '1974' },
 };
 
 let currentDriver = null;
