@@ -293,6 +293,7 @@ function saveDocViaggio(targa, data) {
 function renderDocViaggio(targa) {
     const docs = loadDocViaggio(targa);
     const slotsEl = document.getElementById('docSlots');
+    const extraEl = document.getElementById('docExtra');
     const isClosed = docs._chiuso === true;
 
     // Slot obbligatori
