@@ -463,7 +463,8 @@ function initFirebase(targa) {
             m.status !== 'completed' &&
             m.status !== 'cancelled'
         );
-        const isNuova = mia && (!missioneCorrente || missioneCorrente.id !== mia.id);
+        const lastSeenId = localStorage.getItem('ibs_last_mission_' + targa);
+        const isNuova = mia && (!missioneCorrente || missioneCorrente.id !== mia.id) && mia.id !== lastSeenId;
         missioneCorrente = mia || null;
 
         // Se nuova missione: pulisci residui di viaggio precedente chiuso
@@ -476,9 +477,10 @@ function initFirebase(targa) {
         }
         aggiornaHeroMissione(mia || null);
         if (isNuova) {
-            showToast('ðŸ“‹ Nuova missione assegnata',
-                `${mia.id} Â· ${estraiCitta(mia.from)} â†’ ${estraiCitta(mia.to)}`,
-                'success');
+            localStorage.setItem(‘ibs_last_mission_’ + targa, mia.id);
+            showToast(‘Nuova missione assegnata’,
+                mia.id + ‘ · ‘ + estraiCitta(mia.from) + ‘ → ‘ + estraiCitta(mia.to),
+                ‘success’);
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
         }
 
@@ -1056,7 +1058,6 @@ function avviaAppFull(driver) {
         } catch(e) {}
         document.getElementById('giorniPresenza').textContent = giorniPresenti || 0;
     })();
-    document.getElementById('chatDot').style.display = 'block';
     renderDocumenti(driver.targa);
     renderTimestamps();
     renderMissioniTerminate([]); // verrÃ  aggiornato dal listener Firebase
@@ -1746,7 +1747,8 @@ function showSection(id, btn) {
 
 // ====== CHAT (Firebase Realtime) ======
 // Struttura: chat/{driverCode}/{pushId} = { from, text, time, mine, ts }
-let chatMsgCount = 0; // per tracciare non letti
+let chatMsgCount = 0;
+let chatReady = false;
 
 // â”€â”€ Audio ding â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function playDing() {
@@ -1801,17 +1803,16 @@ function initChatDriver() {
         // Messaggi dalla Centrale (non dal driver stesso)
         const fromCentrale = msgs.filter(m => !currentDriver ||
             (m.from !== currentDriver.nome && m.from !== currentDriver.code));
-        if (fromCentrale.length > chatMsgCount) {
+        if (chatReady && fromCentrale.length > chatMsgCount) {
             const dot = document.getElementById('chatDot');
             if (dot) dot.style.display = 'block';
-            // Ding + notifica push per ogni nuovo messaggio
-            const nuovi = fromCentrale.slice(chatMsgCount);
-            nuovi.forEach(m => {
+            fromCentrale.slice(chatMsgCount).forEach(m => {
                 playDing();
                 if (document.hidden) inviaNotificaPush(m.text);
             });
         }
         chatMsgCount = fromCentrale.length;
+        chatReady = true;
     });
 }
 
