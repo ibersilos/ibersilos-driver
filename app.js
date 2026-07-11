@@ -1460,9 +1460,17 @@ function salvaRifornimento() {
     if (tipo === 'LAVAGGI') {
         const importo = parseFloat(document.getElementById('rifImporto').value);
         if (!importo || importo <= 0) { showToast("Inserisci l'importo", '', 'warning'); return; }
+        if (!scontrinoDataUrl) {
+            showToast('Scan obbligatorio', 'Allega scontrino o fattura prima di salvare', 'error');
+            const wrap = document.getElementById('rifScontrinoZoneWrap');
+            wrap.style.outline = '2px solid var(--red)';
+            wrap.style.borderRadius = '14px';
+            setTimeout(() => { wrap.style.outline = ''; }, 2200);
+            return;
+        }
         entry = {
             tipo, totale: importo.toFixed(2),
-            scontrinoThumb: scontrinoDataUrl || null,
+            scontrinoThumb: scontrinoDataUrl,
             ora: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
         };
     } else {
