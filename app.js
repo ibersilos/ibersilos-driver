@@ -1217,9 +1217,10 @@ function renderRapportino(rap) {
     } else {
         rifEl.innerHTML = rifList.map((r, i) => {
             const isGasolio = r.tipo === 'GASOLIO';
-            const borderCol = isGasolio ? 'var(--red)' : '#1565c0';
-            const badgeBg = isGasolio ? 'var(--red)' : '#1565c0';
-            const emoji = isGasolio ? 'ðŸ›¢ï¸' : 'ðŸ’§';
+            const isLavaggio = r.tipo === 'LAVAGGI';
+            const borderCol = isLavaggio ? '#00897b' : (isGasolio ? 'var(--red)' : '#1565c0');
+            const badgeBg = isLavaggio ? '#00897b' : (isGasolio ? 'var(--red)' : '#1565c0');
+            const emoji = isLavaggio ? '\u{1F9FC}' : (isGasolio ? '\u{1F6E2}' : '\u{1F4A7}');
             return `
             <div style="background:var(--gray);border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:4px solid ${borderCol};">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
@@ -1229,14 +1230,13 @@ function renderRapportino(rap) {
                             <span style="font-size:0.72rem;color:var(--text-dim);">${r.ora || ''}</span>
                         </div>
                         <div style="display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;">
-                            <span style="font-size:1rem;font-weight:800;color:var(--red);">â‚¬ ${r.totale}</span>
-                            <span style="font-size:0.78rem;color:var(--text-dim);">${r.litri} L Ã— â‚¬ ${r.prezzo}/L</span>
+                            <span style="font-size:1rem;font-weight:800;color:var(--red);">€ ${r.totale}</span>
+                            ${!isLavaggio ? `<span style="font-size:0.78rem;color:var(--text-dim);">${r.litri} L × € ${r.prezzo}/L</span>` : ''}
                         </div>
-
                         ${r.scontrinoThumb ? `
                         <div style="margin-top:8px;">
-                            <img src="${r.scontrinoThumb}" style="height:60px;border-radius:6px;border:2px solid var(--green);object-fit:cover;cursor:pointer;" onclick="apriScontrino('${i}')" />
-                            <div style="font-size:0.68rem;color:var(--green);font-weight:700;margin-top:3px;">âœ“ Scontrino allegato</div>
+                            <img src="${r.scontrinoThumb}" style="height:60px;border-radius:6px;border:2px solid var(--green);object-fit:cover;cursor:pointer;" onclick="apriScontrino(${i})" />
+                            <div style="font-size:0.68rem;color:var(--green);font-weight:700;margin-top:3px;">✔ Scontrino allegato</div>
                         </div>` : ''}
                     </div>
                     ${!rap.chiuso ? `<button onclick="eliminaRifornimento(${i})" style="background:none;border:none;cursor:pointer;padding:4px;flex-shrink:0;">
@@ -1362,9 +1362,12 @@ function apriModalRif() {
     document.getElementById('rifTipo').value = '';
     document.getElementById('rifLitri').value = '';
     document.getElementById('rifPrezzo').value = '';
-    document.querySelectorAll('#btn-gasolio, #btn-adblue').forEach(b => b.classList.remove('selected'));
+    document.getElementById('rifImporto').value = '';
+    document.querySelectorAll('#btn-gasolio, #btn-adblue, #btn-lavaggi').forEach(b => b.classList.remove('selected'));
+    document.getElementById('rifCombustibileFields').style.display = 'none';
+    document.getElementById('rifLavaggioFields').style.display = 'none';
     document.getElementById('rifTotaleBox').style.display = 'none';
-    document.getElementById('rifTotaleVal').textContent = 'â‚¬ 0.00';
+    document.getElementById('rifTotaleVal').textContent = '€ 0.00';
     scontrinoDataUrl = null;
     document.getElementById('rifScontrinoPreview').style.display = 'none';
     document.getElementById('rifScontrinoZoneWrap').style.display = '';
@@ -1377,7 +1380,10 @@ function selezionaCarburante(tipo) {
     document.getElementById('rifTipo').value = tipo;
     document.getElementById('btn-gasolio').classList.toggle('selected', tipo === 'GASOLIO');
     document.getElementById('btn-adblue').classList.toggle('selected', tipo === 'ADBLUE');
-    // Adblue ha solitamente un prezzo diverso - hint nel placeholder
+    document.getElementById('btn-lavaggi').classList.toggle('selected', tipo === 'LAVAGGI');
+    const isLavaggio = tipo === 'LAVAGGI';
+    document.getElementById('rifCombustibileFields').style.display = isLavaggio ? 'none' : '';
+    document.getElementById('rifLavaggioFields').style.display = isLavaggio ? '' : 'none';
     if (tipo === 'ADBLUE') {
         document.getElementById('rifPrezzo').placeholder = '0.000 (AdBlue)';
     } else {
@@ -1387,6 +1393,17 @@ function selezionaCarburante(tipo) {
 }
 
 function calcolaImporto() {
+    const tipo = document.getElementById('rifTipo').value;
+    if (tipo === 'LAVAGGI') {
+        const importo = parseFloat(document.getElementById('rifImporto').value) || 0;
+        if (importo > 0) {
+            document.getElementById('rifTotaleVal').textContent = '€ ' + importo.toFixed(2);
+            document.getElementById('rifTotaleBox').style.display = 'block';
+        } else {
+            document.getElementById('rifTotaleBox').style.display = 'none';
+        }
+        return;
+    }
     const litri = parseFloat(document.getElementById('rifLitri').value) || 0;
     const prezzo = parseFloat(document.getElementById('rifPrezzo').value) || 0;
     if (litri > 0 && prezzo > 0) {
@@ -1437,35 +1454,47 @@ function apriScontrino(index) {
 
 function salvaRifornimento() {
     const tipo = document.getElementById('rifTipo').value;
-    const litri = parseFloat(document.getElementById('rifLitri').value);
-    const prezzo = parseFloat(document.getElementById('rifPrezzo').value);
+    if (!tipo) { showToast('Seleziona il tipo', '', 'warning'); return; }
 
-    if (!tipo) { showToast('Seleziona il tipo di carburante', '', 'warning'); return; }
-    if (!litri || litri <= 0) { showToast('Inserisci i litri', '', 'warning'); return; }
-    if (!prezzo || prezzo <= 0) { showToast('Inserisci il prezzo per litro', '', 'warning'); return; }
-    if (!scontrinoDataUrl) {
-        showToast('Scan obbligatorio', 'Scansiona lo scontrino prima di salvare', 'error');
-        // Shake animation
-        const wrap = document.getElementById('rifScontrinoZoneWrap');
-        wrap.style.outline = '2px solid var(--red)';
-        wrap.style.borderRadius = '14px';
-        setTimeout(() => { wrap.style.outline = ''; }, 2200);
-        return;
+    let entry;
+    if (tipo === 'LAVAGGI') {
+        const importo = parseFloat(document.getElementById('rifImporto').value);
+        if (!importo || importo <= 0) { showToast("Inserisci l'importo", '', 'warning'); return; }
+        entry = {
+            tipo, totale: importo.toFixed(2),
+            scontrinoThumb: scontrinoDataUrl || null,
+            ora: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+        };
+    } else {
+        const litri = parseFloat(document.getElementById('rifLitri').value);
+        const prezzo = parseFloat(document.getElementById('rifPrezzo').value);
+        if (!litri || litri <= 0) { showToast('Inserisci i litri', '', 'warning'); return; }
+        if (!prezzo || prezzo <= 0) { showToast('Inserisci il prezzo per litro', '', 'warning'); return; }
+        if (!scontrinoDataUrl) {
+            showToast('Scan obbligatorio', 'Scansiona lo scontrino prima di salvare', 'error');
+            const wrap = document.getElementById('rifScontrinoZoneWrap');
+            wrap.style.outline = '2px solid var(--red)';
+            wrap.style.borderRadius = '14px';
+            setTimeout(() => { wrap.style.outline = ''; }, 2200);
+            return;
+        }
+        const totale = (litri * prezzo).toFixed(2);
+        entry = {
+            tipo, litri: litri.toFixed(1), prezzo: prezzo.toFixed(3), totale,
+            scontrinoThumb: scontrinoDataUrl,
+            ora: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+        };
     }
 
-    const totale = (litri * prezzo).toFixed(2);
     const rap = loadRapportino(currentDriver.targa);
     if (!rap.rifornimenti) rap.rifornimenti = [];
-    rap.rifornimenti.push({
-        tipo, litri: litri.toFixed(1), prezzo: prezzo.toFixed(3), totale,
-        scontrinoThumb: scontrinoDataUrl,
-        ora: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-    });
+    rap.rifornimenti.push(entry);
     saveRapportino(rap);
     scontrinoDataUrl = null;
     chiudiModal('modalRif');
     renderRapportino(rap);
-    showToast('Rifornimento salvato', `${tipo} Â· ${litri.toFixed(1)} L Â· â‚¬ ${totale}`, 'success');
+    const desc = tipo === 'LAVAGGI' ? ('€ ' + entry.totale) : (entry.litri + ' L · € ' + entry.totale);
+    showToast(tipo === 'LAVAGGI' ? 'Lavaggio registrato' : 'Rifornimento salvato', tipo + ' · ' + desc, 'success');
 }
 
 function eliminaRifornimento(index) {

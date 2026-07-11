@@ -995,30 +995,38 @@
             <button class="modal-close" onclick="chiudiModal('modalRif')">&times;</button>
         </div>
 
-        <!-- Tipo carburante -->
+        <!-- Tipo -->
         <div class="form-group" style="margin-bottom:16px;">
-            <label class="form-label">Tipo Carburante *</label>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <button type="button" class="carico-btn" id="btn-gasolio" onclick="selezionaCarburante('GASOLIO')" style="padding:16px 10px;">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <label class="form-label">Tipo *</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                <button type="button" class="carico-btn" id="btn-gasolio" onclick="selezionaCarburante('GASOLIO')" style="padding:14px 6px;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M3 22V8l6-6h6l3 3v3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-1v4H3z"/>
                         <path d="M9 2v6H3"/>
                         <line x1="9" y1="14" x2="15" y2="14"/>
                     </svg>
-                    <span style="font-size:0.85rem;">🛢️ Gasolio</span>
+                    <span style="font-size:0.78rem;">🛢️ Gasolio</span>
                 </button>
-                <button type="button" class="carico-btn" id="btn-adblue" onclick="selezionaCarburante('ADBLUE')" style="padding:16px 10px;">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <button type="button" class="carico-btn" id="btn-adblue" onclick="selezionaCarburante('ADBLUE')" style="padding:14px 6px;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 2C6 8 4 12 4 14a8 8 0 0 0 16 0c0-2-2-6-8-12z"/>
                         <path d="M9 17a3 3 0 0 0 6 0"/>
                     </svg>
-                    <span style="font-size:0.85rem;">💧 AdBlue</span>
+                    <span style="font-size:0.78rem;">💧 AdBlue</span>
+                </button>
+                <button type="button" class="carico-btn" id="btn-lavaggi" onclick="selezionaCarburante('LAVAGGI')" style="padding:14px 6px;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 12h16M4 12a8 8 0 0 0 16 0M4 12V8a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v4"/>
+                        <path d="M8 19l4 2 4-2"/>
+                    </svg>
+                    <span style="font-size:0.78rem;">🧼 Lavaggi</span>
                 </button>
             </div>
             <input type="hidden" id="rifTipo" value="">
         </div>
 
-        <!-- Litri e Prezzo -->
+        <!-- Litri e Prezzo (Gasolio / AdBlue) -->
+        <div id="rifCombustibileFields" style="display:none;">
         <div class="input-row" style="margin-bottom:16px;">
             <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label">Litri *</label>
@@ -1030,6 +1038,17 @@
                 <label class="form-label">€/Litro *</label>
                 <input type="number" class="form-input" id="rifPrezzo" placeholder="0.000" min="0" step="0.001"
                     style="font-size:1.1rem;font-weight:800;text-align:center;"
+                    oninput="calcolaImporto()">
+            </div>
+        </div>
+        </div><!-- /rifCombustibileFields -->
+
+        <!-- Importo Lavaggi -->
+        <div id="rifLavaggioFields" style="display:none;margin-bottom:16px;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Importo € *</label>
+                <input type="number" class="form-input" id="rifImporto" placeholder="0.00" min="0" step="0.01"
+                    style="font-size:1.2rem;font-weight:800;text-align:center;"
                     oninput="calcolaImporto()">
             </div>
         </div>
