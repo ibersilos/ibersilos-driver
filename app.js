@@ -1019,14 +1019,17 @@ function doLogin() {
 }
 
 function avviaApp(driver) {
-    // Valida che il driver salvato sia ancora valido (targa aggiornata, ecc.)
+    // Valida che il driver salvato sia ancora valido e targa aggiornata
     const fresh = driver.code && demoDrivers[driver.code];
-    if (fresh && fresh.targa !== driver.targa) {
+    if (!fresh) { localStorage.removeItem('ibsDriver'); return; }
+    if (fresh.targa !== driver.targa) {
+        // Migra docs dalla vecchia targa alla nuova
+        const oldDocs = localStorage.getItem(docsKey(driver.targa));
+        if (oldDocs && !localStorage.getItem(docsKey(fresh.targa))) {
+            localStorage.setItem(docsKey(fresh.targa), oldDocs);
+        }
         driver = Object.assign({}, fresh, { code: driver.code });
         localStorage.setItem('ibsDriver', JSON.stringify(driver));
-    } else if (!fresh) {
-        localStorage.removeItem('ibsDriver');
-        return;
     }
     currentDriver = driver;
     const docs = loadDocs(driver.targa);
@@ -1099,12 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const s = localStorage.getItem('ibsDriver');
         if (s) avviaApp(JSON.parse(s));
     } catch(e) { localStorage.removeItem('ibsDriver'); }
-    // Pre-fill oggi come min date per i date inputs
-    const oggi = new Date().toISOString().slice(0,10);
-    ['setupPatente','setupCqc','setupTacho'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.min = oggi;
-    });
+    // nessun vincolo min su date scadenza documenti (possono già essere scaduti)
 });
 
 // ====== RAPPORTINO GIORNALIERO ======
