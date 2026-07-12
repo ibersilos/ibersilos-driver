@@ -1019,6 +1019,15 @@ function doLogin() {
 }
 
 function avviaApp(driver) {
+    // Valida che il driver salvato sia ancora valido (targa aggiornata, ecc.)
+    const fresh = driver.code && demoDrivers[driver.code];
+    if (fresh && fresh.targa !== driver.targa) {
+        driver = Object.assign({}, fresh, { code: driver.code });
+        localStorage.setItem('ibsDriver', JSON.stringify(driver));
+    } else if (!fresh) {
+        localStorage.removeItem('ibsDriver');
+        return;
+    }
     currentDriver = driver;
     const docs = loadDocs(driver.targa);
     if (!docs) {
