@@ -477,10 +477,10 @@ function initFirebase(targa) {
         }
         aggiornaHeroMissione(mia || null);
         if (isNuova) {
-            localStorage.setItem(‘ibs_last_mission_’ + targa, mia.id);
-            showToast(‘Nuova missione assegnata’,
-                mia.id + ‘ · ‘ + estraiCitta(mia.from) + ‘ → ‘ + estraiCitta(mia.to),
-                ‘success’);
+            localStorage.setItem('ibs_last_mission_' + targa, mia.id);
+            showToast('Nuova missione assegnata',
+                mia.id + ' · ' + estraiCitta(mia.from) + ' → ' + estraiCitta(mia.to),
+                'success');
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
         }
 
@@ -529,7 +529,7 @@ function renderMissioniTerminate(lista) {
             + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">'
             + '<div style="flex:1;min-width:0;">'
             + '<div style="font-weight:800;font-size:0.88rem;color:var(--black);">' + id + '</div>'
-            + '<div style="font-size:0.82rem;font-weight:700;color:#333;margin-top:3px;">' + (da||'â€”') + ' â†’ ' + (a||'â€”') + '</div>'
+            + '<div style="font-size:0.82rem;font-weight:700;color:#333;margin-top:3px;">' + (da||'-') + ' > ' + (a||'-') + '</div>'
             + (cargo ? '<div style="font-size:0.72rem;color:var(--text-dim);margin-top:2px;">' + cargo + '</div>' : '')
             + '</div>'
             + '<div style="text-align:right;flex-shrink:0;">'
@@ -550,7 +550,7 @@ function toggleMissioniTerminate() {
     toggle.textContent    = open ? 'â–¶' : 'â–¼';
 }
 // Estrae il nome cittÃ  da un indirizzo
-// Gestisce formati: "Azienda, Via X, 33080 San Quirino PN, Italia" â†’ "San Quirino"
+// Gestisce formati: "Azienda, Via X, 33080 San Quirino PN, Italia" â†' "San Quirino"
 function estraiCitta(indirizzo) {
     if (!indirizzo) return 'â€”';
     const parti = indirizzo.split(',').map(function(p) { return p.trim(); }).filter(Boolean);
@@ -653,7 +653,7 @@ function aggiornaPercorsoCard(m) {
         }).join('');
         divTappe.style.display = 'block';
     } else if (m.from || m.to) {
-        // Fallback: from â†’ to semplice
+        // Fallback: from â†' to semplice
         const from = estraiCitta(m.from);
         const to   = estraiCitta(m.to);
         divTappe.innerHTML =
@@ -704,7 +704,7 @@ function aggiornaPercorsoCard(m) {
         metriche.push({ icon: 'ðŸ•', label: 'ETA', val: m.etaArrivo || m.eta });
     }
     if (m.pedaggi !== undefined) {
-        metriche.push({ icon: 'ðŸ’¶', label: 'Pedaggi', val: (m.pedaggi || '0') + ' â‚¬' });
+        metriche.push({ icon: '💶', label: 'Pedaggi', val: (m.pedaggi || '0') + ' â‚¬' });
     }
     // m.date giÃ  gestito sopra come "Data Carico"
     if (m.cargo) {
@@ -1399,7 +1399,7 @@ function salvaTratta() {
     saveRapportino(rap);
     chiudiModal('modalTratta');
     renderRapportino(rap);
-    showToast('Tratta aggiunta', `${da} â†’ ${a} Â· ${km} km`, 'success');
+    showToast('Tratta aggiunta', `${da} â†' ${a} Â· ${km} km`, 'success');
 }
 
 function eliminaTratta(index) {
@@ -1773,7 +1773,7 @@ function apriDettaglioRap(index) {
                 <div style="background:var(--gray);border-radius:8px;padding:10px 12px;margin-bottom:6px;border-left:3px solid ${rf.tipo === 'GASOLIO' ? 'var(--red)' : '#1565c0'};">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
                         <div>
-                            <span style="font-size:0.72rem;font-weight:700;color:${rf.tipo === 'GASOLIO' ? 'var(--red)' : '#1565c0'};">${rf.tipo === 'GASOLIO' ? 'ðŸ›¢ï¸' : 'ðŸ’§'} ${rf.tipo}</span>
+                            <span style="font-size:0.72rem;font-weight:700;color:${rf.tipo === 'GASOLIO' ? 'var(--red)' : '#1565c0'};">${rf.tipo === 'GASOLIO' ? 'ðŸ›¢ï¸' : '💧'} ${rf.tipo}</span>
                             <div style="font-weight:800;font-size:0.9rem;color:var(--red);margin-top:2px;">â‚¬ ${rf.totale}</div>
                             <div style="font-size:0.72rem;color:var(--text-dim);">${rf.litri} L Ã— â‚¬ ${rf.prezzo}/L</div>
                         </div>
@@ -2134,7 +2134,7 @@ function avviaNavi() {
         }
     }
 
-    // Se non ci sono tappe, usa from â†’ to della missione come waypoint
+    // Se non ci sono tappe, usa from â†' to della missione come waypoint
     if (!waypoints.length && missioneCorrente) {
         if (missioneCorrente.from) waypoints.push(missioneCorrente.from);
         if (missioneCorrente.to)   waypoints.push(missioneCorrente.to);
