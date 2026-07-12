@@ -1019,14 +1019,41 @@ function doLogin() {
 }
 
 function avviaApp(driver) {
-    // Valida che il driver salvato sia ancora valido e targa aggiornata
-    const fresh = driver.code && demoDrivers[driver.code];
+    // Recupera code se mancante (formato localStorage vecchio)
+    if (!driver.code) {
+        const entry = Object.entries(demoDrivers).find(([, v]) => v.targa === driver.targa);
+        if (!entry) { localStorage.removeItem('ibsDriver'); return; }
+        driver = Object.assign({}, driver, { code: entry[0] });
+        localStorage.setItem('ibsDriver', JSON.stringify(driver));
+    }
+    const fresh = demoDrivers[driver.code];
     if (!fresh) { localStorage.removeItem('ibsDriver'); return; }
     if (fresh.targa !== driver.targa) {
-        // Migra docs dalla vecchia targa alla nuova
-        const oldDocs = localStorage.getItem(docsKey(driver.targa));
-        if (oldDocs && !localStorage.getItem(docsKey(fresh.targa))) {
-            localStorage.setItem(docsKey(fresh.targa), oldDocs);
+        const oldTarga = driver.targa;
+        const newTarga = fresh.targa;
+        // Migra docs
+        const oldDocs = localStorage.getItem(docsKey(oldTarga));
+        if (oldDocs && !localStorage.getItem(docsKey(newTarga))) {
+            localStorage.setItem(docsKey(newTarga), oldDocs);
+        }
+        // Migra rapportino di oggi
+        const oldRap = localStorage.getItem(rapKey(oldTarga));
+        if (oldRap && !localStorage.getItem(rapKey(newTarga))) {
+            localStorage.setItem(rapKey(newTarga), oldRap);
+        }
+        // Migra rapportini per data (ibs_rap_targa_YYYY-MM-DD)
+        const prefix = 'ibs_rap_' + oldTarga + '_';
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith(prefix)) {
+                const newK = 'ibs_rap_' + newTarga + '_' + k.slice(prefix.length);
+                if (!localStorage.getItem(newK)) localStorage.setItem(newK, localStorage.getItem(k));
+            }
+        }
+        // Migra storico rapportini
+        const oldSto = localStorage.getItem(rapStoricoKey(oldTarga));
+        if (oldSto && !localStorage.getItem(rapStoricoKey(newTarga))) {
+            localStorage.setItem(rapStoricoKey(newTarga), oldSto);
         }
         driver = Object.assign({}, fresh, { code: driver.code });
         localStorage.setItem('ibsDriver', JSON.stringify(driver));
