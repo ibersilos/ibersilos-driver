@@ -13,7 +13,7 @@
     <meta name="theme-color" content="#E30613">
     <link rel="apple-touch-icon" href="logo.jpg">
     <link rel="manifest" href="manifest.json">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Ibersilos — App Autista</title>
     <!-- Firebase SDK -->
     <!-- Firebase Compat SDK — compatibile con tutte le versioni Android WebView -->
@@ -35,18 +35,27 @@
             --text-dim: #666;
         }
 
-        body { background: var(--gray); color: var(--black); overflow-x: hidden; }
-        .container { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.12); }
+        body { background: var(--gray); color: var(--black); overflow-x: hidden;
+               height: 100dvh; height: 100vh; /* fallback then override */
+        }
+        .container {
+            max-width: 480px; margin: 0 auto; background: #fff;
+            min-height: 100vh; min-height: 100dvh;
+            position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.12);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
 
         /* ========== LOGO ========== */
         .logo-ibersilos { display: none; } /* legacy — ora usa logo.jpg */
 
         /* ========== LOGIN ========== */
         .login-page {
-            min-height: 100vh;
+            min-height: 100vh; min-height: 100dvh;
             display: flex; flex-direction: column;
             justify-content: center; align-items: center;
             padding: 32px 24px;
+            padding-top: calc(32px + env(safe-area-inset-top, 0px));
+            padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
             background: linear-gradient(160deg, #fff 0%, #f0f0f0 100%);
         }
         .login-logo {
@@ -152,7 +161,7 @@
         .nav-tab-icon { display: block; font-size: 1.2rem; margin-bottom: 2px; }
 
         /* ========== SECTIONS ========== */
-        .section { display: none; padding: 18px; animation: fadeIn 0.3s; }
+        .section { display: none; padding: 18px; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); animation: fadeIn 0.3s; }
         .section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -353,7 +362,7 @@
         .dettaglio-val { font-weight: 600; }
 
         /* ========== CHAT ========== */
-        .chat-wrap { display: flex; flex-direction: column; height: calc(100vh - 220px); }
+        .chat-wrap { display: flex; flex-direction: column; height: calc(100dvh - 220px); height: calc(100vh - 220px); }
         .chat-messages { flex: 1; overflow-y: auto; padding: 12px 0; display: flex; flex-direction: column; gap: 10px; }
         .chat-messages::-webkit-scrollbar { width: 3px; }
         .chat-messages::-webkit-scrollbar-thumb { background: var(--border); }
