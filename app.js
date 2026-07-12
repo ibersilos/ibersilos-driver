@@ -1123,6 +1123,26 @@ function doLogout() {
     document.getElementById('loginPage').style.display = '';
 }
 
+// ====== MIGRAZIONE ONE-TIME GN957JX → HD562HG ======
+(function migrazioneTargaOnce() {
+    if (localStorage.getItem('ibs_migra_GN957JX_done')) return;
+    const oldT = 'GN957JX', newT = 'HD562HG';
+    let count = 0;
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        const newK = k.replace('ibs_rap_' + oldT, 'ibs_rap_' + newT)
+                       .replace('ibs_docs_' + oldT, 'ibs_docs_' + newT)
+                       .replace('ibs_rif_' + oldT, 'ibs_rif_' + newT);
+        if (newK !== k && !localStorage.getItem(newK)) {
+            localStorage.setItem(newK, localStorage.getItem(k));
+            count++;
+        }
+    }
+    localStorage.setItem('ibs_migra_GN957JX_done', '1');
+    if (count > 0) console.log('[IBS] Migrati ' + count + ' record GN957JX -> HD562HG');
+})();
+
 // ====== INIT ======
 document.addEventListener('DOMContentLoaded', () => {
     try {
