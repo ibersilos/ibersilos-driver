@@ -1333,15 +1333,18 @@ function renderRapportino(rap) {
     // Sosta notturna (se chiuso)
     if (rap.chiuso && rap.sostaNotturna) {
         document.getElementById('sostaBox').style.display = 'block';
-        document.getElementById('sostaFlag').textContent = rap.sostaNotturna.flag;
-        document.getElementById('sostaPaese').textContent = rap.sostaNotturna.paese;
-        const isEstero = rap.sostaNotturna.codice !== 'IT';
+        const sn = rap.sostaNotturna;
+        document.getElementById('sostaCodice').textContent = sn.codice || '??';
+        document.getElementById('sostaCitta').textContent = sn.citta || '-';
+        document.getElementById('sostaCAP').textContent = sn.cap ? 'CAP ' + sn.cap : '';
+        document.getElementById('sostaPaese').textContent = sn.paese || '-';
+        const isEstero = sn.codice !== 'IT' && sn.codice !== '??';
         const tb = document.getElementById('trasfertaBadge');
         if (isEstero) {
-            tb.textContent = 'ðŸŒ Trasferta Estero';
+            tb.textContent = 'Trasferta Estero';
             tb.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:25px;font-weight:700;font-size:0.9rem;background:var(--red);color:white;';
         } else {
-            tb.textContent = 'ðŸ‡®ðŸ‡¹ Lavoro Italia';
+            tb.textContent = 'Lavoro Italia';
             tb.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:25px;font-weight:700;font-size:0.9rem;background:#009246;color:white;';
         }
     } else {
@@ -1684,18 +1687,20 @@ function chiudiRapportino() {
 }
 
 async function finalizzaRapportino(rap, lat, lng) {
-    let sostaNotturna = { paese: 'Sconosciuta', codice: '??', flag: 'ðŸ³ï¸' };
+    let sostaNotturna = { paese: 'Sconosciuta', codice: '??', citta: '', cap: '' };
 
     if (lat !== null && lng !== null) {
         try {
-            // Nominatim OpenStreetMap - free, no API key
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=it`);
             const data = await res.json();
-            const codice = (data.address && data.address.country_code ? data.address.country_code.toUpperCase() : '??');
-            const info = PAESI_INFO[codice] || { nome: (data.address && data.address.country) || 'Sconosciuto', flag: 'ðŸ³ï¸' };
-            sostaNotturna = { paese: info.nome, codice, flag: info.flag, lat, lng };
+            const addr = data.address || {};
+            const codice = (addr.country_code ? addr.country_code.toUpperCase() : '??');
+            const info = PAESI_INFO[codice] || { nome: addr.country || 'Sconosciuto' };
+            const citta = addr.city || addr.town || addr.village || addr.municipality || addr.county || '';
+            const cap = addr.postcode || '';
+            sostaNotturna = { paese: info.nome, codice, citta, cap, lat, lng };
         } catch(e) {
-            sostaNotturna = { paese: 'Errore rilevamento', codice: '??', flag: 'ðŸ³ï¸' };
+            sostaNotturna = { paese: 'Errore rilevamento', codice: '??', citta: '', cap: '' };
         }
     }
 
@@ -1714,7 +1719,7 @@ async function finalizzaRapportino(rap, lat, lng) {
     renderStoricoRapportini(currentDriver.targa);
 
     const isEstero = sostaNotturna.codice !== 'IT' && sostaNotturna.codice !== '??';
-    showToast('Rapportino chiuso!', `${sostaNotturna.flag} ${sostaNotturna.paese} Â· ${isEstero ? 'Trasferta Estero' : 'Lavoro Italia'}`, 'success');
+    showToast('Rapportino chiuso!', sostaNotturna.codice + ' - ' + (sostaNotturna.citta || sostaNotturna.paese) + ' · ' + (isEstero ? 'Trasferta Estero' : 'Lavoro Italia'), 'success');
 }
 
 function renderStoricoRapportini(targa) {
