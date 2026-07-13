@@ -1474,7 +1474,7 @@ const demoDrivers = {
     'DRV001': { nome: 'Marco Porcu',        targa: 'HC604HC', password: '1975' },
     'DRV002': { nome: 'Sergiu Rotaru',      targa: 'GS811CG', password: '1968' },
     'DRV003': { nome: 'Wlady Manente',      targa: 'GS812CG', password: '1975' },
-    'DRV004': { nome: 'Alessandro Chiarin', targa: 'GN957JX', password: '1974' },
+    'DRV004': { nome: 'Alessandro Chiarin', targa: 'HD562HG', password: '1974' },
 };
 
 let currentDriver = null;
@@ -2776,7 +2776,7 @@ function updateSyncStatus(connected, msg) {
     }
 }
 
-async async function pushToFirebase(targa) {
+async function pushToFirebase(targa) {
     if (!window._fbReady || !window._fb) return false;
     const { db, ref, set } = window._fb;
 
@@ -2814,7 +2814,7 @@ async async function pushToFirebase(targa) {
     }
 }
 
-async async function chiudiViaggio() {
+async function chiudiViaggio() {
     const targa = currentDriver.targa;
     const docs = loadDocViaggio(targa);
 
@@ -2915,7 +2915,7 @@ async function fbPushFase(targa) {
 function docsKey(targa) { return 'ibs_docs_' + targa; }
 
 // Alias: scanner module usa saveDocs/loadDocs
-function saveDocs(targa, data) { saveDocViaggio(targa, data); }
+function saveDocs(targa, data) { localStorage.setItem(docsKey(targa), JSON.stringify(data)); }
 
 // Firebase Storage upload per documenti viaggio
 async function uploadDocFirebase(file, docId, tipo) {
@@ -3390,7 +3390,6 @@ function apriModalRif() {
     scontrinoDataUrl = null;
     document.getElementById('rifScontrinoPreview').style.display = 'none';
     document.getElementById('rifScontrinoZoneWrap').style.display = '';
-    document.getElementById('inputScan').value = '';
     document.getElementById('inputGallery').value = '';
     document.getElementById('modalRif').classList.add('active');
 }
@@ -3484,7 +3483,6 @@ function rimuoviScontrino() {
     scontrinoDataUrl = null;
     document.getElementById('rifScontrinoPreview').style.display = 'none';
     document.getElementById('rifScontrinoZoneWrap').style.display = '';
-    document.getElementById('inputScan').value = '';
     document.getElementById('inputGallery').value = '';
 }
 
