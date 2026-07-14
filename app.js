@@ -1136,7 +1136,7 @@ function loadRapportino(targa) {
         if (data && data.data === getToday()) return data;
     } catch(e) {}
     // Crea nuovo rapportino per oggi
-    const nuovo = { data: getToday(), targa, tratte: [], rifornimenti: [], kmTotali: 0, note: '', chiuso: false, sostaNotturna: null };
+    const nuovo = { data: getToday(), targa, kmGiorno: 0, oreGuida: 0, rifornimenti: [], note: '', chiuso: false, sostaNotturna: null };
     localStorage.setItem(rapKey(targa), JSON.stringify(nuovo));
     return nuovo;
 }
@@ -1159,73 +1159,39 @@ function initRapportino() {
     renderStoricoRapportini(targa);
 }
 
+function aggiornaKmDisplay() {
+    const val = parseInt(document.getElementById('rapKmInput').value, 10) || 0;
+    document.getElementById('rapKmTotali').textContent = val;
+}
+
 function renderRapportino(rap) {
-    // Stato badge
     const badge = document.getElementById('rapStatoBadge');
-    if (rap.chiuso) {
+    const chiuso = rap.chiuso;
+    if (chiuso) {
         badge.textContent = 'Chiuso';
         badge.style.cssText = 'font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:5px 12px;border-radius:20px;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;';
         document.getElementById('btnChiudiRapportino').style.display = 'none';
-        document.getElementById('btnAggiungiTratta').style.display = 'none';
         document.getElementById('btnSoloTrasferta').style.display = 'none';
         document.getElementById('rapNote').disabled = true;
         document.getElementById('rapNote').style.background = '#f5f5f5';
+        document.getElementById('rapKmInput').disabled = true;
+        document.getElementById('rapKmInput').style.background = '#f5f5f5';
+        document.getElementById('rapOreGuida').disabled = true;
+        document.getElementById('rapOreGuida').style.background = '#f5f5f5';
     } else {
         badge.textContent = 'Aperto';
         badge.style.cssText = 'font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:5px 12px;border-radius:20px;background:#fff8e1;color:#b8860b;border:1px solid var(--yellow);';
         document.getElementById('btnChiudiRapportino').style.display = '';
-        document.getElementById('btnAggiungiTratta').style.display = '';
-        // Mostra "Solo Trasferta" solo se non ci sono tratte
-        document.getElementById('btnSoloTrasferta').style.display = rap.tratte.length === 0 ? 'flex' : 'none';
+        document.getElementById('btnSoloTrasferta').style.display = 'flex';
         document.getElementById('rapNote').disabled = false;
+        document.getElementById('rapKmInput').disabled = false;
+        document.getElementById('rapOreGuida').disabled = false;
     }
 
-    // KM
-    document.getElementById('rapKmTotali').textContent = rap.kmTotali || 0;
-
-    // Note
+    document.getElementById('rapKmTotali').textContent = rap.kmGiorno || 0;
+    document.getElementById('rapKmInput').value = rap.kmGiorno || '';
+    document.getElementById('rapOreGuida').value = rap.oreGuida || '';
     document.getElementById('rapNote').value = rap.note || '';
-
-    // Tratte
-    document.getElementById('rapCountTratte').textContent = rap.tratte.length;
-    const listaEl = document.getElementById('listaTratte');
-    if (rap.tratte.length === 0) {
-        listaEl.innerHTML = `<div style="text-align:center;padding:20px;color:#bbb;font-size:0.85rem;">Nessuna tratta aggiunta</div>`;
-    } else {
-        listaEl.innerHTML = rap.tratte.map((t, i) => {
-            const caricoColor = t.carico === 'CISTERNA CARICA' ? 'var(--red)' : t.carico === 'CONTAINER' ? '#1565c0' : 'var(--text-dim)';
-            const caricoIcon = t.carico === 'CISTERNA CARICA'
-                ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>'
-                : t.carico === 'CISTERNA VUOTA'
-                ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>'
-                : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="13" rx="1"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="8" y1="12" x2="8" y2="17"/><line x1="16" y1="12" x2="16" y2="17"/></svg>';
-            let extraInfo = '';
-            if (t.targaCisterna) extraInfo += `<span style="background:var(--yellow);color:var(--black);font-weight:800;font-size:0.7rem;padding:2px 8px;border-radius:6px;font-family:monospace;letter-spacing:1px;">${t.targaCisterna}</span>`;
-            if (t.targaRimorchio) extraInfo += `<span style="background:#e3f2fd;color:#1565c0;font-weight:800;font-size:0.7rem;padding:2px 8px;border-radius:6px;font-family:monospace;letter-spacing:1px;">${t.targaRimorchio}</span>`;
-            if (t.isoContainer) extraInfo += `<span style="background:#f3e5f5;color:#6a1b9a;font-weight:700;font-size:0.7rem;padding:2px 8px;border-radius:6px;font-family:monospace;letter-spacing:1px;">${t.isoContainer}</span>`;
-            return `
-            <div style="background:var(--gray);border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:4px solid var(--yellow);">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-                    <div style="flex:1;">
-                        <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:0.9rem;">
-                            <span>${t.da}</span>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                            <span>${t.a}</span>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:10px;margin-top:5px;flex-wrap:wrap;">
-                            <span style="font-size:0.82rem;font-weight:800;color:var(--red);">${t.km} km</span>
-                            <span style="display:inline-flex;align-items:center;gap:4px;font-size:0.75rem;font-weight:700;color:${caricoColor};">${caricoIcon} ${t.carico}</span>
-                        </div>
-                        ${extraInfo ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">${extraInfo}</div>` : ''}
-                        ${t.note ? `<div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;font-style:italic;">${t.note}</div>` : ''}
-                    </div>
-                    ${!rap.chiuso ? `<button onclick="eliminaTratta(${i})" style="background:none;border:none;cursor:pointer;padding:4px;margin-left:8px;flex-shrink:0;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-                    </button>` : ''}
-                </div>
-            </div>`;
-        }).join('');
-    }
 
     // Rifornimenti
     const rifEl = document.getElementById('listaRifornimenti');
@@ -1539,21 +1505,22 @@ const PAESI_INFO = {
 };
 
 function chiudiSoloTrasferta() {
-    const rap = loadRapportino(currentDriver.targa);
-    if (rap.tratte.length > 0) {
-        // Se nel frattempo sono state aggiunte tratte, usa il flusso normale
-        chiudiRapportino();
+    const ore = parseFloat(document.getElementById('rapOreGuida').value);
+    if (!ore || ore < 1) {
+        showToast('Ore di guida richieste', 'Seleziona le ore di guida (min 1) prima di chiudere', 'error');
         return;
     }
-    if (!confirm('Chiudere il rapportino come giornata di sola trasferta (nessuna guida)?')) return;
+    if (!confirm('Chiudere il rapportino come giornata di sola trasferta?')) return;
+
+    const rap = loadRapportino(currentDriver.targa);
+    rap.note = document.getElementById('rapNote').value;
+    rap.kmGiorno = parseInt(document.getElementById('rapKmInput').value, 10) || 0;
+    rap.oreGuida = ore;
+    rap.soloTrasferta = true;
 
     const btn = document.getElementById('btnSoloTrasferta');
-    const orig = btn.innerHTML;
     btn.innerHTML = '<div style="width:16px;height:16px;border:2px solid rgba(0,0,0,0.2);border-top:2px solid var(--black);border-radius:50%;animation:spin 0.9s linear infinite;"></div> Rilevamento GPS...';
     btn.disabled = true;
-
-    rap.note = document.getElementById('rapNote').value;
-    rap.soloTrasferta = true;  // flag per il dispatcher
 
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -1567,9 +1534,10 @@ function chiudiSoloTrasferta() {
 }
 
 function chiudiRapportino() {
-    const rap = loadRapportino(currentDriver.targa);
-    if (rap.tratte.length === 0) {
-        showToast('Nessuna tratta', 'Aggiungi almeno una tratta prima di chiudere', 'warning');
+    const km = parseInt(document.getElementById('rapKmInput').value, 10) || 0;
+    const ore = parseFloat(document.getElementById('rapOreGuida').value);
+    if (!ore || ore < 1) {
+        showToast('Ore di guida richieste', 'Seleziona le ore di guida (min 1) prima di chiudere', 'error');
         return;
     }
     const docs = loadDocViaggio(currentDriver.targa);
@@ -1584,8 +1552,9 @@ function chiudiRapportino() {
     btn.innerHTML = '<div style="width:18px;height:18px;border:3px solid rgba(0,0,0,0.2);border-top:3px solid var(--black);border-radius:50%;animation:spin 0.9s linear infinite;"></div> Rilevamento GPS...';
     btn.disabled = true;
 
-    // Salva note
     rap.note = document.getElementById('rapNote').value;
+    rap.kmGiorno = km;
+    rap.oreGuida = ore;
 
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -1654,7 +1623,7 @@ function renderStoricoRapportini(targa) {
                 <div>
                     <div style="font-weight:700;font-size:0.88rem;">${data}</div>
                     <div style="font-size:0.75rem;color:var(--text-dim);margin-top:3px;">
-                        ${r.tratte.length} tratte · <strong style="color:var(--red)">${r.kmTotali} km</strong>
+                        <strong style="color:var(--red)">${r.kmGiorno || r.kmTotali || 0} km</strong> · ${r.oreGuida || 0} ore guida${r.soloTrasferta ? ' · <em>trasferta</em>' : ''}
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
@@ -1678,8 +1647,8 @@ function apriDettaglioRap(index) {
     document.getElementById('dettaglioRapTitolo').textContent = data;
     document.getElementById('dettaglioRapContent').innerHTML = `
         <div style="background:linear-gradient(135deg,var(--red),var(--dark-red));border:3px solid var(--yellow);border-radius:12px;padding:16px;text-align:center;margin-bottom:16px;">
-            <div style="font-size:2.4rem;font-weight:800;color:white;line-height:1;">${r.kmTotali}</div>
-            <div style="font-size:0.75rem;color:rgba(255,255,255,0.85);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;">KM Totali</div>
+            <div style="font-size:2.4rem;font-weight:800;color:white;line-height:1;">${r.kmGiorno || r.kmTotali || 0}</div>
+            <div style="font-size:0.75rem;color:rgba(255,255,255,0.85);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;">KM Totali · ${r.oreGuida || 0} ore guida</div>
         </div>
         ${r.sostaNotturna ? `
         <div style="background:white;border:2px solid var(--yellow);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px;">
@@ -1692,25 +1661,7 @@ function apriDettaglioRap(index) {
                 </span>
             </div>
         </div>` : ''}
-        <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:8px;">Tratte</div>
-        ${r.tratte.map(t => {
-            let badge = '';
-            if (t.targaCisterna) badge += `<span style="background:var(--yellow);color:var(--black);font-weight:800;font-size:0.68rem;padding:2px 7px;border-radius:5px;font-family:monospace;letter-spacing:1px;">${t.targaCisterna}</span> `;
-            if (t.targaRimorchio) badge += `<span style="background:#e3f2fd;color:#1565c0;font-weight:800;font-size:0.68rem;padding:2px 7px;border-radius:5px;font-family:monospace;letter-spacing:1px;">${t.targaRimorchio}</span> `;
-            if (t.isoContainer) badge += `<span style="background:#f3e5f5;color:#6a1b9a;font-weight:700;font-size:0.68rem;padding:2px 7px;border-radius:5px;font-family:monospace;letter-spacing:1px;">${t.isoContainer}</span>`;
-            return `
-            <div style="background:var(--gray);border-radius:8px;padding:11px 13px;margin-bottom:7px;border-left:3px solid var(--yellow);">
-                <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:0.88rem;">
-                    <span>${t.da}</span>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                    <span>${t.a}</span>
-                    <span style="margin-left:auto;font-size:0.85rem;font-weight:800;color:var(--red);">${t.km} km</span>
-                </div>
-                <div style="font-size:0.73rem;font-weight:700;color:var(--text-dim);margin-top:4px;">${t.carico}</div>
-                ${badge ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;">${badge}</div>` : ''}
-                ${t.note ? `<div style="font-size:0.72rem;color:var(--text-dim);margin-top:3px;font-style:italic;">${t.note}</div>` : ''}
-            </div>`;
-        }).join('')}
+        ${r.soloTrasferta ? `<div style="background:#e8f5e9;border:2px solid #4caf50;border-radius:10px;padding:12px 14px;margin-bottom:12px;text-align:center;font-weight:700;color:#2e7d32;">🏨 Giornata in trasferta senza guida</div>` : ''}
         ${r.note ? `<div style="background:#fffde7;border:1px solid var(--yellow);border-radius:8px;padding:12px;margin-top:10px;font-size:0.85rem;color:#555;font-style:italic;">${r.note}</div>` : ''}
         ${(r.rifornimenti && r.rifornimenti.length > 0) ? `
         <div style="margin-top:14px;">
