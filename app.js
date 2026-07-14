@@ -243,25 +243,48 @@ function renderRegistro(ts) {
 // Modal conferma fase
 let faseDaConfermare = null;
 
+const KM_FASI = {
+    arrivo_carico:  'KM a vuoto (partenza → carico)',
+    arrivo_scarico: 'KM a carico (carico → scarico)',
+};
+
 function confermaFase(faseId, faseLabel) {
     faseDaConfermare = { id: faseId, label: faseLabel };
     document.getElementById('confermaFaseTitle').textContent = faseLabel;
     document.getElementById('confermaFaseBody').textContent = `Stai per registrare "${faseLabel}" con data e ora attuali. Questa operazione non può essere annullata.`;
+    const kmWrap = document.getElementById('kmFaseWrap');
+    const kmInput = document.getElementById('kmFaseInput');
+    if (KM_FASI[faseId]) {
+        document.getElementById('kmFaseLabel').textContent = KM_FASI[faseId];
+        kmInput.value = '';
+        kmWrap.style.display = 'block';
+    } else {
+        kmWrap.style.display = 'none';
+    }
     document.getElementById('modalConfermaFase').classList.add('active');
+    if (KM_FASI[faseId]) setTimeout(() => kmInput.focus(), 300);
 }
 
 function eseguiFase() {
     if (!faseDaConfermare || !currentDriver) return;
     const targa = currentDriver.targa;
     const ts = loadTimestamps(targa);
+
+    if (KM_FASI[faseDaConfermare.id]) {
+        const val = parseInt(document.getElementById('kmFaseInput').value, 10);
+        if (!val || val <= 0) {
+            showToast('KM richiesti', 'Inserisci i km prima di registrare la fase', 'error');
+            return;
+        }
+        ts[faseDaConfermare.id + '_km'] = val;
+    }
+
     ts[faseDaConfermare.id] = new Date().toISOString();
     saveTimestamps(targa, ts);
     chiudiModal('modalConfermaFase');
     renderTimestamps();
     showToast(faseDaConfermare.label, formatTs(ts[faseDaConfermare.id]), 'success');
-    // Push live a Firebase ad ogni fase
     fbPushFase(targa);
-    // Dopo Fine Scarico: mostra pannello documenti viaggio
     if (faseDaConfermare.id === 'fine_scarico') {
         setTimeout(() => {
             renderDocViaggio(targa);
@@ -276,8 +299,9 @@ function eseguiFase() {
 
 // ====== DOCUMENTI VIAGGIO ======
 const DOC_SLOTS = [
-    { id: 'cmr',   label: 'CMR',              icon: '📋', obbligatorio: false },
-    { id: 'bolla', label: 'Bolla di consegna', icon: '📄', obbligatorio: false },
+    { id: 'cmr',      label: 'CMR',                  icon: '📋', obbligatorio: false },
+    { id: 'bolla',    label: 'Bolla di consegna',    icon: '📄', obbligatorio: false },
+    { id: 'lavaggio', label: 'Certificato Lavaggio', icon: '🧼', obbligatorio: false },
 ];
 
 function docViaggioKey(targa) { return 'ibs_docviaggio_' + targa; }
