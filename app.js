@@ -463,8 +463,7 @@ function initFirebase(targa) {
             m.status !== 'completed' &&
             m.status !== 'cancelled'
         );
-        const lastSeenId = localStorage.getItem('ibs_last_mission_' + targa);
-        const isNuova = mia && (!missioneCorrente || missioneCorrente.id !== mia.id) && mia.id !== lastSeenId;
+        const isNuova = mia && (!missioneCorrente || missioneCorrente.id !== mia.id);
         missioneCorrente = mia || null;
 
         // Se nuova missione: pulisci residui di viaggio precedente chiuso
@@ -477,9 +476,8 @@ function initFirebase(targa) {
         }
         aggiornaHeroMissione(mia || null);
         if (isNuova) {
-            localStorage.setItem('ibs_last_mission_' + targa, mia.id);
-            showToast('Nuova missione assegnata',
-                mia.id + ' · ' + estraiCitta(mia.from) + ' → ' + estraiCitta(mia.to),
+            showToast('ðŸ“‹ Nuova missione assegnata',
+                `${mia.id} Â· ${estraiCitta(mia.from)} â†’ ${estraiCitta(mia.to)}`,
                 'success');
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
         }
@@ -529,7 +527,7 @@ function renderMissioniTerminate(lista) {
             + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">'
             + '<div style="flex:1;min-width:0;">'
             + '<div style="font-weight:800;font-size:0.88rem;color:var(--black);">' + id + '</div>'
-            + '<div style="font-size:0.82rem;font-weight:700;color:#333;margin-top:3px;">' + (da||'-') + ' > ' + (a||'-') + '</div>'
+            + '<div style="font-size:0.82rem;font-weight:700;color:#333;margin-top:3px;">' + (da||'â€”') + ' â†’ ' + (a||'â€”') + '</div>'
             + (cargo ? '<div style="font-size:0.72rem;color:var(--text-dim);margin-top:2px;">' + cargo + '</div>' : '')
             + '</div>'
             + '<div style="text-align:right;flex-shrink:0;">'
@@ -550,7 +548,7 @@ function toggleMissioniTerminate() {
     toggle.textContent    = open ? 'â–¶' : 'â–¼';
 }
 // Estrae il nome cittÃ  da un indirizzo
-// Gestisce formati: "Azienda, Via X, 33080 San Quirino PN, Italia" â†' "San Quirino"
+// Gestisce formati: "Azienda, Via X, 33080 San Quirino PN, Italia" â†’ "San Quirino"
 function estraiCitta(indirizzo) {
     if (!indirizzo) return 'â€”';
     const parti = indirizzo.split(',').map(function(p) { return p.trim(); }).filter(Boolean);
@@ -653,7 +651,7 @@ function aggiornaPercorsoCard(m) {
         }).join('');
         divTappe.style.display = 'block';
     } else if (m.from || m.to) {
-        // Fallback: from â†' to semplice
+        // Fallback: from â†’ to semplice
         const from = estraiCitta(m.from);
         const to   = estraiCitta(m.to);
         divTappe.innerHTML =
@@ -704,7 +702,7 @@ function aggiornaPercorsoCard(m) {
         metriche.push({ icon: 'ðŸ•', label: 'ETA', val: m.etaArrivo || m.eta });
     }
     if (m.pedaggi !== undefined) {
-        metriche.push({ icon: '💶', label: 'Pedaggi', val: (m.pedaggi || '0') + ' â‚¬' });
+        metriche.push({ icon: 'ðŸ’¶', label: 'Pedaggi', val: (m.pedaggi || '0') + ' â‚¬' });
     }
     // m.date giÃ  gestito sopra come "Data Carico"
     if (m.cargo) {
@@ -1019,45 +1017,6 @@ function doLogin() {
 }
 
 function avviaApp(driver) {
-    // Recupera code se mancante (formato localStorage vecchio)
-    if (!driver.code) {
-        const entry = Object.entries(demoDrivers).find(([, v]) => v.targa === driver.targa);
-        if (!entry) { localStorage.removeItem('ibsDriver'); return; }
-        driver = Object.assign({}, driver, { code: entry[0] });
-        localStorage.setItem('ibsDriver', JSON.stringify(driver));
-    }
-    const fresh = demoDrivers[driver.code];
-    if (!fresh) { localStorage.removeItem('ibsDriver'); return; }
-    if (fresh.targa !== driver.targa) {
-        const oldTarga = driver.targa;
-        const newTarga = fresh.targa;
-        // Migra docs
-        const oldDocs = localStorage.getItem(docsKey(oldTarga));
-        if (oldDocs && !localStorage.getItem(docsKey(newTarga))) {
-            localStorage.setItem(docsKey(newTarga), oldDocs);
-        }
-        // Migra rapportino di oggi
-        const oldRap = localStorage.getItem(rapKey(oldTarga));
-        if (oldRap && !localStorage.getItem(rapKey(newTarga))) {
-            localStorage.setItem(rapKey(newTarga), oldRap);
-        }
-        // Migra rapportini per data (ibs_rap_targa_YYYY-MM-DD)
-        const prefix = 'ibs_rap_' + oldTarga + '_';
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-            const k = localStorage.key(i);
-            if (k && k.startsWith(prefix)) {
-                const newK = 'ibs_rap_' + newTarga + '_' + k.slice(prefix.length);
-                if (!localStorage.getItem(newK)) localStorage.setItem(newK, localStorage.getItem(k));
-            }
-        }
-        // Migra storico rapportini
-        const oldSto = localStorage.getItem(rapStoricoKey(oldTarga));
-        if (oldSto && !localStorage.getItem(rapStoricoKey(newTarga))) {
-            localStorage.setItem(rapStoricoKey(newTarga), oldSto);
-        }
-        driver = Object.assign({}, fresh, { code: driver.code });
-        localStorage.setItem('ibsDriver', JSON.stringify(driver));
-    }
     currentDriver = driver;
     const docs = loadDocs(driver.targa);
     if (!docs) {
@@ -1097,6 +1056,7 @@ function avviaAppFull(driver) {
         } catch(e) {}
         document.getElementById('giorniPresenza').textContent = giorniPresenti || 0;
     })();
+    document.getElementById('chatDot').style.display = 'block';
     renderDocumenti(driver.targa);
     renderTimestamps();
     renderMissioniTerminate([]); // verrÃ  aggiornato dal listener Firebase
@@ -1123,42 +1083,22 @@ function doLogout() {
     document.getElementById('loginPage').style.display = '';
 }
 
-// ====== MIGRAZIONE ONE-TIME GN957JX → HD562HG ======
-(function migrazioneTargaOnce() {
-    if (localStorage.getItem('ibs_migra_GN957JX_done')) return;
-    const oldT = 'GN957JX', newT = 'HD562HG';
-    let count = 0;
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-        const k = localStorage.key(i);
-        if (!k) continue;
-        const newK = k.replace('ibs_rap_' + oldT, 'ibs_rap_' + newT)
-                       .replace('ibs_docs_' + oldT, 'ibs_docs_' + newT)
-                       .replace('ibs_rif_' + oldT, 'ibs_rif_' + newT);
-        if (newK !== k && !localStorage.getItem(newK)) {
-            localStorage.setItem(newK, localStorage.getItem(k));
-            count++;
-        }
-    }
-    localStorage.setItem('ibs_migra_GN957JX_done', '1');
-    if (count > 0) console.log('[IBS] Migrati ' + count + ' record GN957JX -> HD562HG');
-})();
-
 // ====== INIT ======
 document.addEventListener('DOMContentLoaded', () => {
     try {
         const s = localStorage.getItem('ibsDriver');
         if (s) avviaApp(JSON.parse(s));
     } catch(e) { localStorage.removeItem('ibsDriver'); }
-    // nessun vincolo min su date scadenza documenti (possono già essere scaduti)
+    // Pre-fill oggi come min date per i date inputs
+    const oggi = new Date().toISOString().slice(0,10);
+    ['setupPatente','setupCqc','setupTacho'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.min = oggi;
+    });
 });
 
 // ====== RAPPORTINO GIORNALIERO ======
-let selectedRapDate = '';   // impostato in initRapportino
-
 function rapKey(targa) { return 'ibs_rap_' + targa; }
-function rapKeyDate(targa, date) {
-    return date === getToday() ? rapKey(targa) : 'ibs_rap_' + targa + '_' + date;
-}
 function rapStoricoKey(targa) { return 'ibs_rap_storico_' + targa; }
 
 function getToday() {
@@ -1167,72 +1107,29 @@ function getToday() {
 }
 
 function loadRapportino(targa) {
-    const date = selectedRapDate || getToday();
     try {
-        const data = JSON.parse(localStorage.getItem(rapKeyDate(targa, date)));
-        if (data && data.data === date) return data;
+        const data = JSON.parse(localStorage.getItem(rapKey(targa)));
+        if (data && data.data === getToday()) return data;
     } catch(e) {}
-    const nuovo = { data: date, targa, tratte: [], rifornimenti: [], kmTotali: 0, note: '', chiuso: false, sostaNotturna: null };
-    localStorage.setItem(rapKeyDate(targa, date), JSON.stringify(nuovo));
+    // Crea nuovo rapportino per oggi
+    const nuovo = { data: getToday(), targa, tratte: [], rifornimenti: [], kmTotali: 0, note: '', chiuso: false, sostaNotturna: null };
+    localStorage.setItem(rapKey(targa), JSON.stringify(nuovo));
     return nuovo;
 }
 
 function saveRapportino(rap) {
-    localStorage.setItem(rapKeyDate(rap.targa, rap.data), JSON.stringify(rap));
-}
-
-function renderCalendarioRapportino(targa) {
-    const el = document.getElementById('rapCalendario');
-    if (!el) return;
-    const today = getToday();
-    const giorni = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        giorni.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
-    }
-    const GIORNI_SHORT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-    el.innerHTML = giorni.map(date => {
-        const d = new Date(date + 'T12:00:00');
-        const isToday = date === today;
-        const isSel = date === selectedRapDate;
-        const hasRap = !!localStorage.getItem(rapKeyDate(targa, date));
-        const dot = hasRap
-            ? '<div style="width:6px;height:6px;border-radius:50%;background:' + (isSel ? 'white' : '#2e7d32') + ';margin:3px auto 0;"></div>'
-            : '<div style="width:6px;height:6px;border-radius:50%;background:transparent;margin:3px auto 0;"></div>';
-        const bg = isSel ? 'var(--red)' : (isToday ? '#fff3f3' : 'var(--gray)');
-        const col = isSel ? 'white' : 'var(--black)';
-        const border = isSel ? 'none' : (isToday ? '1.5px solid var(--red)' : '1.5px solid transparent');
-        return '<div onclick="selezionaGiornoRap(\'' + date + '\')" style="flex-shrink:0;width:44px;text-align:center;padding:8px 4px 6px;border-radius:10px;cursor:pointer;background:' + bg + ';border:' + border + ';transition:background 0.15s;">'
-            + '<div style="font-size:0.62rem;font-weight:700;color:' + (isSel ? 'rgba(255,255,255,0.8)' : 'var(--text-dim)') + ';text-transform:uppercase;">' + GIORNI_SHORT[d.getDay()] + '</div>'
-            + '<div style="font-size:1.1rem;font-weight:800;color:' + col + ';line-height:1.2;">' + d.getDate() + '</div>'
-            + dot
-            + '</div>';
-    }).join('');
-}
-
-function selezionaGiornoRap(date) {
-    selectedRapDate = date;
-    if (!currentDriver) return;
-    renderCalendarioRapportino(currentDriver.targa);
-    const rap = loadRapportino(currentDriver.targa);
-    const d = new Date(date + 'T12:00:00');
-    const dateStr = d.toLocaleDateString('it-IT', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
-    document.getElementById('rapDataOggi').textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-    renderRapportino(rap);
+    localStorage.setItem(rapKey(rap.targa), JSON.stringify(rap));
 }
 
 function initRapportino() {
     if (!currentDriver) return;
     const targa = currentDriver.targa;
-    if (!selectedRapDate) selectedRapDate = getToday();
     const rap = loadRapportino(targa);
 
-    renderCalendarioRapportino(targa);
-    const d = new Date(selectedRapDate + 'T12:00:00');
-    const dateStr = d.toLocaleDateString('it-IT', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    // Header
+    const dateStr = new Date().toLocaleDateString('it-IT', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
     document.getElementById('rapDataOggi').textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-    document.getElementById('rapTargaHeader').textContent = targa + ' · ' + currentDriver.nome;
+    document.getElementById('rapTargaHeader').textContent = targa + ' Â· ' + currentDriver.nome;
 
     renderRapportino(rap);
     renderStoricoRapportini(targa);
@@ -1320,10 +1217,9 @@ function renderRapportino(rap) {
     } else {
         rifEl.innerHTML = rifList.map((r, i) => {
             const isGasolio = r.tipo === 'GASOLIO';
-            const isLavaggio = r.tipo === 'LAVAGGI';
-            const borderCol = isLavaggio ? '#00897b' : (isGasolio ? 'var(--red)' : '#1565c0');
-            const badgeBg = isLavaggio ? '#00897b' : (isGasolio ? 'var(--red)' : '#1565c0');
-            const emoji = isLavaggio ? '\u{1F9FC}' : (isGasolio ? '\u{1F6E2}' : '\u{1F4A7}');
+            const borderCol = isGasolio ? 'var(--red)' : '#1565c0';
+            const badgeBg = isGasolio ? 'var(--red)' : '#1565c0';
+            const emoji = isGasolio ? 'ðŸ›¢ï¸' : 'ðŸ’§';
             return `
             <div style="background:var(--gray);border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:4px solid ${borderCol};">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
@@ -1333,13 +1229,14 @@ function renderRapportino(rap) {
                             <span style="font-size:0.72rem;color:var(--text-dim);">${r.ora || ''}</span>
                         </div>
                         <div style="display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;">
-                            <span style="font-size:1rem;font-weight:800;color:var(--red);">€ ${r.totale}</span>
-                            ${!isLavaggio ? `<span style="font-size:0.78rem;color:var(--text-dim);">${r.litri} L × € ${r.prezzo}/L</span>` : ''}
+                            <span style="font-size:1rem;font-weight:800;color:var(--red);">â‚¬ ${r.totale}</span>
+                            <span style="font-size:0.78rem;color:var(--text-dim);">${r.litri} L Ã— â‚¬ ${r.prezzo}/L</span>
                         </div>
+
                         ${r.scontrinoThumb ? `
                         <div style="margin-top:8px;">
-                            <img src="${r.scontrinoThumb}" style="height:60px;border-radius:6px;border:2px solid var(--green);object-fit:cover;cursor:pointer;" onclick="apriScontrino(${i})" />
-                            <div style="font-size:0.68rem;color:var(--green);font-weight:700;margin-top:3px;">✔ Scontrino allegato</div>
+                            <img src="${r.scontrinoThumb}" style="height:60px;border-radius:6px;border:2px solid var(--green);object-fit:cover;cursor:pointer;" onclick="apriScontrino('${i}')" />
+                            <div style="font-size:0.68rem;color:var(--green);font-weight:700;margin-top:3px;">âœ“ Scontrino allegato</div>
                         </div>` : ''}
                     </div>
                     ${!rap.chiuso ? `<button onclick="eliminaRifornimento(${i})" style="background:none;border:none;cursor:pointer;padding:4px;flex-shrink:0;">
@@ -1353,18 +1250,15 @@ function renderRapportino(rap) {
     // Sosta notturna (se chiuso)
     if (rap.chiuso && rap.sostaNotturna) {
         document.getElementById('sostaBox').style.display = 'block';
-        const sn = rap.sostaNotturna;
-        document.getElementById('sostaCodice').textContent = sn.codice || '??';
-        document.getElementById('sostaCitta').textContent = sn.citta || '-';
-        document.getElementById('sostaCAP').textContent = sn.cap ? 'CAP ' + sn.cap : '';
-        document.getElementById('sostaPaese').textContent = sn.paese || '-';
-        const isEstero = sn.codice !== 'IT' && sn.codice !== '??';
+        document.getElementById('sostaFlag').textContent = rap.sostaNotturna.flag;
+        document.getElementById('sostaPaese').textContent = rap.sostaNotturna.paese;
+        const isEstero = rap.sostaNotturna.codice !== 'IT';
         const tb = document.getElementById('trasfertaBadge');
         if (isEstero) {
-            tb.textContent = 'Trasferta Estero';
+            tb.textContent = 'ðŸŒ Trasferta Estero';
             tb.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:25px;font-weight:700;font-size:0.9rem;background:var(--red);color:white;';
         } else {
-            tb.textContent = 'Lavoro Italia';
+            tb.textContent = 'ðŸ‡®ðŸ‡¹ Lavoro Italia';
             tb.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:25px;font-weight:700;font-size:0.9rem;background:#009246;color:white;';
         }
     } else {
@@ -1449,7 +1343,7 @@ function salvaTratta() {
     saveRapportino(rap);
     chiudiModal('modalTratta');
     renderRapportino(rap);
-    showToast('Tratta aggiunta', `${da} â†' ${a} Â· ${km} km`, 'success');
+    showToast('Tratta aggiunta', `${da} â†’ ${a} Â· ${km} km`, 'success');
 }
 
 function eliminaTratta(index) {
@@ -1468,12 +1362,9 @@ function apriModalRif() {
     document.getElementById('rifTipo').value = '';
     document.getElementById('rifLitri').value = '';
     document.getElementById('rifPrezzo').value = '';
-    document.getElementById('rifImporto').value = '';
-    document.querySelectorAll('#btn-gasolio, #btn-adblue, #btn-lavaggi').forEach(b => b.classList.remove('selected'));
-    document.getElementById('rifCombustibileFields').style.display = 'none';
-    document.getElementById('rifLavaggioFields').style.display = 'none';
+    document.querySelectorAll('#btn-gasolio, #btn-adblue').forEach(b => b.classList.remove('selected'));
     document.getElementById('rifTotaleBox').style.display = 'none';
-    document.getElementById('rifTotaleVal').textContent = '€ 0.00';
+    document.getElementById('rifTotaleVal').textContent = 'â‚¬ 0.00';
     scontrinoDataUrl = null;
     document.getElementById('rifScontrinoPreview').style.display = 'none';
     document.getElementById('rifScontrinoZoneWrap').style.display = '';
@@ -1486,10 +1377,7 @@ function selezionaCarburante(tipo) {
     document.getElementById('rifTipo').value = tipo;
     document.getElementById('btn-gasolio').classList.toggle('selected', tipo === 'GASOLIO');
     document.getElementById('btn-adblue').classList.toggle('selected', tipo === 'ADBLUE');
-    document.getElementById('btn-lavaggi').classList.toggle('selected', tipo === 'LAVAGGI');
-    const isLavaggio = tipo === 'LAVAGGI';
-    document.getElementById('rifCombustibileFields').style.display = isLavaggio ? 'none' : '';
-    document.getElementById('rifLavaggioFields').style.display = isLavaggio ? '' : 'none';
+    // Adblue ha solitamente un prezzo diverso - hint nel placeholder
     if (tipo === 'ADBLUE') {
         document.getElementById('rifPrezzo').placeholder = '0.000 (AdBlue)';
     } else {
@@ -1499,17 +1387,6 @@ function selezionaCarburante(tipo) {
 }
 
 function calcolaImporto() {
-    const tipo = document.getElementById('rifTipo').value;
-    if (tipo === 'LAVAGGI') {
-        const importo = parseFloat(document.getElementById('rifImporto').value) || 0;
-        if (importo > 0) {
-            document.getElementById('rifTotaleVal').textContent = '€ ' + importo.toFixed(2);
-            document.getElementById('rifTotaleBox').style.display = 'block';
-        } else {
-            document.getElementById('rifTotaleBox').style.display = 'none';
-        }
-        return;
-    }
     const litri = parseFloat(document.getElementById('rifLitri').value) || 0;
     const prezzo = parseFloat(document.getElementById('rifPrezzo').value) || 0;
     if (litri > 0 && prezzo > 0) {
@@ -1560,55 +1437,35 @@ function apriScontrino(index) {
 
 function salvaRifornimento() {
     const tipo = document.getElementById('rifTipo').value;
-    if (!tipo) { showToast('Seleziona il tipo', '', 'warning'); return; }
+    const litri = parseFloat(document.getElementById('rifLitri').value);
+    const prezzo = parseFloat(document.getElementById('rifPrezzo').value);
 
-    let entry;
-    if (tipo === 'LAVAGGI') {
-        const importo = parseFloat(document.getElementById('rifImporto').value);
-        if (!importo || importo <= 0) { showToast("Inserisci l'importo", '', 'warning'); return; }
-        if (!scontrinoDataUrl) {
-            showToast('Scan obbligatorio', 'Allega scontrino o fattura prima di salvare', 'error');
-            const wrap = document.getElementById('rifScontrinoZoneWrap');
-            wrap.style.outline = '2px solid var(--red)';
-            wrap.style.borderRadius = '14px';
-            setTimeout(() => { wrap.style.outline = ''; }, 2200);
-            return;
-        }
-        entry = {
-            tipo, totale: importo.toFixed(2),
-            scontrinoThumb: scontrinoDataUrl,
-            ora: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-        };
-    } else {
-        const litri = parseFloat(document.getElementById('rifLitri').value);
-        const prezzo = parseFloat(document.getElementById('rifPrezzo').value);
-        if (!litri || litri <= 0) { showToast('Inserisci i litri', '', 'warning'); return; }
-        if (!prezzo || prezzo <= 0) { showToast('Inserisci il prezzo per litro', '', 'warning'); return; }
-        if (!scontrinoDataUrl) {
-            showToast('Scan obbligatorio', 'Scansiona lo scontrino prima di salvare', 'error');
-            const wrap = document.getElementById('rifScontrinoZoneWrap');
-            wrap.style.outline = '2px solid var(--red)';
-            wrap.style.borderRadius = '14px';
-            setTimeout(() => { wrap.style.outline = ''; }, 2200);
-            return;
-        }
-        const totale = (litri * prezzo).toFixed(2);
-        entry = {
-            tipo, litri: litri.toFixed(1), prezzo: prezzo.toFixed(3), totale,
-            scontrinoThumb: scontrinoDataUrl,
-            ora: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-        };
+    if (!tipo) { showToast('Seleziona il tipo di carburante', '', 'warning'); return; }
+    if (!litri || litri <= 0) { showToast('Inserisci i litri', '', 'warning'); return; }
+    if (!prezzo || prezzo <= 0) { showToast('Inserisci il prezzo per litro', '', 'warning'); return; }
+    if (!scontrinoDataUrl) {
+        showToast('Scan obbligatorio', 'Scansiona lo scontrino prima di salvare', 'error');
+        // Shake animation
+        const wrap = document.getElementById('rifScontrinoZoneWrap');
+        wrap.style.outline = '2px solid var(--red)';
+        wrap.style.borderRadius = '14px';
+        setTimeout(() => { wrap.style.outline = ''; }, 2200);
+        return;
     }
 
+    const totale = (litri * prezzo).toFixed(2);
     const rap = loadRapportino(currentDriver.targa);
     if (!rap.rifornimenti) rap.rifornimenti = [];
-    rap.rifornimenti.push(entry);
+    rap.rifornimenti.push({
+        tipo, litri: litri.toFixed(1), prezzo: prezzo.toFixed(3), totale,
+        scontrinoThumb: scontrinoDataUrl,
+        ora: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+    });
     saveRapportino(rap);
     scontrinoDataUrl = null;
     chiudiModal('modalRif');
     renderRapportino(rap);
-    const desc = tipo === 'LAVAGGI' ? ('€ ' + entry.totale) : (entry.litri + ' L · € ' + entry.totale);
-    showToast(tipo === 'LAVAGGI' ? 'Lavaggio registrato' : 'Rifornimento salvato', tipo + ' · ' + desc, 'success');
+    showToast('Rifornimento salvato', `${tipo} Â· ${litri.toFixed(1)} L Â· â‚¬ ${totale}`, 'success');
 }
 
 function eliminaRifornimento(index) {
@@ -1707,20 +1564,18 @@ function chiudiRapportino() {
 }
 
 async function finalizzaRapportino(rap, lat, lng) {
-    let sostaNotturna = { paese: 'Sconosciuta', codice: '??', citta: '', cap: '' };
+    let sostaNotturna = { paese: 'Sconosciuta', codice: '??', flag: 'ðŸ³ï¸' };
 
     if (lat !== null && lng !== null) {
         try {
+            // Nominatim OpenStreetMap - free, no API key
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=it`);
             const data = await res.json();
-            const addr = data.address || {};
-            const codice = (addr.country_code ? addr.country_code.toUpperCase() : '??');
-            const info = PAESI_INFO[codice] || { nome: addr.country || 'Sconosciuto' };
-            const citta = addr.city || addr.town || addr.village || addr.municipality || addr.county || '';
-            const cap = addr.postcode || '';
-            sostaNotturna = { paese: info.nome, codice, citta, cap, lat, lng };
+            const codice = (data.address && data.address.country_code ? data.address.country_code.toUpperCase() : '??');
+            const info = PAESI_INFO[codice] || { nome: (data.address && data.address.country) || 'Sconosciuto', flag: 'ðŸ³ï¸' };
+            sostaNotturna = { paese: info.nome, codice, flag: info.flag, lat, lng };
         } catch(e) {
-            sostaNotturna = { paese: 'Errore rilevamento', codice: '??', citta: '', cap: '' };
+            sostaNotturna = { paese: 'Errore rilevamento', codice: '??', flag: 'ðŸ³ï¸' };
         }
     }
 
@@ -1739,7 +1594,7 @@ async function finalizzaRapportino(rap, lat, lng) {
     renderStoricoRapportini(currentDriver.targa);
 
     const isEstero = sostaNotturna.codice !== 'IT' && sostaNotturna.codice !== '??';
-    showToast('Rapportino chiuso!', sostaNotturna.codice + ' - ' + (sostaNotturna.citta || sostaNotturna.paese) + ' · ' + (isEstero ? 'Trasferta Estero' : 'Lavoro Italia'), 'success');
+    showToast('Rapportino chiuso!', `${sostaNotturna.flag} ${sostaNotturna.paese} Â· ${isEstero ? 'Trasferta Estero' : 'Lavoro Italia'}`, 'success');
 }
 
 function renderStoricoRapportini(targa) {
@@ -1825,7 +1680,7 @@ function apriDettaglioRap(index) {
                 <div style="background:var(--gray);border-radius:8px;padding:10px 12px;margin-bottom:6px;border-left:3px solid ${rf.tipo === 'GASOLIO' ? 'var(--red)' : '#1565c0'};">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
                         <div>
-                            <span style="font-size:0.72rem;font-weight:700;color:${rf.tipo === 'GASOLIO' ? 'var(--red)' : '#1565c0'};">${rf.tipo === 'GASOLIO' ? 'ðŸ›¢ï¸' : '💧'} ${rf.tipo}</span>
+                            <span style="font-size:0.72rem;font-weight:700;color:${rf.tipo === 'GASOLIO' ? 'var(--red)' : '#1565c0'};">${rf.tipo === 'GASOLIO' ? 'ðŸ›¢ï¸' : 'ðŸ’§'} ${rf.tipo}</span>
                             <div style="font-weight:800;font-size:0.9rem;color:var(--red);margin-top:2px;">â‚¬ ${rf.totale}</div>
                             <div style="font-size:0.72rem;color:var(--text-dim);">${rf.litri} L Ã— â‚¬ ${rf.prezzo}/L</div>
                         </div>
@@ -1848,14 +1703,13 @@ function showSection(id, btn) {
     document.getElementById(id).classList.add('active');
     if (btn) btn.classList.add('active');
     if (id === 'sezChat') { document.getElementById('chatDot').style.display = 'none'; scrollChat(); }
-    if (id === 'sezRapportino') { selectedRapDate = getToday(); initRapportino(); }
+    if (id === 'sezRapportino') { initRapportino(); }
     // sezMappa rimossa
 }
 
 // ====== CHAT (Firebase Realtime) ======
 // Struttura: chat/{driverCode}/{pushId} = { from, text, time, mine, ts }
-let chatMsgCount = 0;
-let chatReady = false;
+let chatMsgCount = 0; // per tracciare non letti
 
 // â”€â”€ Audio ding â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function playDing() {
@@ -1910,16 +1764,17 @@ function initChatDriver() {
         // Messaggi dalla Centrale (non dal driver stesso)
         const fromCentrale = msgs.filter(m => !currentDriver ||
             (m.from !== currentDriver.nome && m.from !== currentDriver.code));
-        if (chatReady && fromCentrale.length > chatMsgCount) {
+        if (fromCentrale.length > chatMsgCount) {
             const dot = document.getElementById('chatDot');
             if (dot) dot.style.display = 'block';
-            fromCentrale.slice(chatMsgCount).forEach(m => {
+            // Ding + notifica push per ogni nuovo messaggio
+            const nuovi = fromCentrale.slice(chatMsgCount);
+            nuovi.forEach(m => {
                 playDing();
                 if (document.hidden) inviaNotificaPush(m.text);
             });
         }
         chatMsgCount = fromCentrale.length;
-        chatReady = true;
     });
 }
 
@@ -2186,7 +2041,7 @@ function avviaNavi() {
         }
     }
 
-    // Se non ci sono tappe, usa from â†' to della missione come waypoint
+    // Se non ci sono tappe, usa from â†’ to della missione come waypoint
     if (!waypoints.length && missioneCorrente) {
         if (missioneCorrente.from) waypoints.push(missioneCorrente.from);
         if (missioneCorrente.to)   waypoints.push(missioneCorrente.to);
