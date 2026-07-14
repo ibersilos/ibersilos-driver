@@ -34,8 +34,8 @@ var firebaseConfig = {
         uploadBytes:    function(ref, blob) { return ref.put(blob); },
         getDownloadURL: function(ref) { return ref.getDownloadURL(); }
       };
-      // Autenticazione anonima â€” prerequisito per Firebase Rules
-      // Usa then(ok,err) invece di finally() per compatibilitÃ  Android WebView
+      // Autenticazione anonima — prerequisito per Firebase Rules
+      // Usa then(ok,err) invece di finally() per compatibilità Android WebView
       function _fbDispatchReady() {
         window._fbReady = true;
         document.dispatchEvent(new Event('firebase-ready'));
@@ -90,7 +90,7 @@ function saveTimestamps(targa, data) {
 function formatTs(iso) {
     const d = new Date(iso);
     return d.toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' })
-        + ' Â· ' + d.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        + ' · ' + d.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
 }
 
 function renderTimestamps() {
@@ -99,7 +99,7 @@ function renderTimestamps() {
     const container = document.getElementById('timestampButtons');
     const fasiWrap  = document.getElementById('fasiViaggioWrap');
 
-    // Mostra fasi solo se c'Ã¨ una missione assegnata
+    // Mostra fasi solo se c'è una missione assegnata
     if (!missioneCorrente) {
         if (fasiWrap) fasiWrap.style.display = 'none';
         container.innerHTML = '';
@@ -111,7 +111,7 @@ function renderTimestamps() {
     }
     if (fasiWrap) fasiWrap.style.display = '';
 
-    // Controlla se il viaggio Ã¨ giÃ  stato chiuso
+    // Controlla se il viaggio è già stato chiuso
     const docsCheck = loadDocViaggio(targa);
     if (docsCheck && docsCheck._chiuso) {
         const banner = document.getElementById('viaggioChiusoBanner');
@@ -202,7 +202,7 @@ function renderTimestamps() {
     // Aggiorna hero
     updateHero(ts);
 
-    // Se fine_scarico giÃ  completata, mostra i documenti
+    // Se fine_scarico già completata, mostra i documenti
     if (ts['fine_scarico']) {
         renderDocViaggio(currentDriver.targa);
         document.getElementById('docViaggioCard').style.display = 'block';
@@ -215,13 +215,13 @@ function updateHero(ts) {
     const label = document.getElementById('missioneLabel');
     const nextIndex = FASI.findIndex(f => !ts[f.id]);
     if (nextIndex === -1) {
-        label.textContent = 'âœ“ Viaggio completato';
+        label.textContent = '✓ Viaggio completato';
     } else if (nextIndex === 0) {
         label.textContent = 'Viaggio in attesa di accettazione';
     } else {
-        label.textContent = `Fase ${nextIndex + 1}/7 â€” ${FASI[nextIndex].label}`;
+        label.textContent = `Fase ${nextIndex + 1}/7 — ${FASI[nextIndex].label}`;
     }
-    document.getElementById('missioneTargaLabel').textContent = 'ðŸš› ' + currentDriver.targa + ' Â· ' + currentDriver.nome;
+    document.getElementById('missioneTargaLabel').textContent = '🚛 ' + currentDriver.targa + ' · ' + currentDriver.nome;
 }
 
 function renderRegistro(ts) {
@@ -246,7 +246,7 @@ let faseDaConfermare = null;
 function confermaFase(faseId, faseLabel) {
     faseDaConfermare = { id: faseId, label: faseLabel };
     document.getElementById('confermaFaseTitle').textContent = faseLabel;
-    document.getElementById('confermaFaseBody').textContent = `Stai per registrare "${faseLabel}" con data e ora attuali. Questa operazione non puÃ² essere annullata.`;
+    document.getElementById('confermaFaseBody').textContent = `Stai per registrare "${faseLabel}" con data e ora attuali. Questa operazione non può essere annullata.`;
     document.getElementById('modalConfermaFase').classList.add('active');
 }
 
@@ -276,8 +276,8 @@ function eseguiFase() {
 
 // ====== DOCUMENTI VIAGGIO ======
 const DOC_SLOTS = [
-    { id: 'cmr',   label: 'CMR',              icon: 'ðŸ“‹', obbligatorio: true },
-    { id: 'bolla', label: 'Bolla di consegna', icon: 'ðŸ“„', obbligatorio: true },
+    { id: 'cmr',   label: 'CMR',              icon: '📋', obbligatorio: true },
+    { id: 'bolla', label: 'Bolla di consegna', icon: '📄', obbligatorio: true },
 ];
 
 function docViaggioKey(targa) { return 'ibs_docviaggio_' + targa; }
@@ -312,7 +312,7 @@ function renderDocViaggio(targa) {
                         ${slot.obbligatorio ? '<span style="background:var(--red);color:white;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:4px;letter-spacing:0.5px;">OBB.</span>' : ''}
                     </div>
                     ${hasdoc
-                        ? `<div style="font-size:0.7rem;color:var(--green);font-weight:700;margin-top:5px;">âœ“ Caricato Â· ${doc.nome}</div>`
+                        ? `<div style="font-size:0.7rem;color:var(--green);font-weight:700;margin-top:5px;">✓ Caricato · ${doc.nome}</div>`
                         : `<div style="font-size:0.7rem;color:${slot.obbligatorio ? 'var(--red)' : 'var(--text-dim)'};margin-top:5px;">${slot.obbligatorio ? 'Documento obbligatorio' : 'Facoltativo'}</div>`
                     }
                 </div>
@@ -323,12 +323,12 @@ function renderDocViaggio(targa) {
                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
                            </button>`}
                        </div>`
-                    : isClosed ? `<span style="font-size:0.72rem;color:#bbb;">â€”</span>`
+                    : isClosed ? `<span style="font-size:0.72rem;color:#bbb;">—</span>`
                     : `<div style="display:flex;gap:6px;">
-                           <label for="slotCam_${slot.id}" style="display:flex;align-items:center;gap:4px;padding:9px 12px;border:none;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:700;background:var(--red);color:white;" title="Fotocamera diretta">ðŸ“· Foto</label>
+                           <label for="slotCam_${slot.id}" style="display:flex;align-items:center;gap:4px;padding:9px 12px;border:none;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:700;background:var(--red);color:white;" title="Fotocamera diretta">📷 Foto</label>
                            <input type="file" id="slotCam_${slot.id}" accept="image/*" capture="environment" style="display:none;" onchange="caricaSlot('${slot.id}',this)">
 
-                           <label for="slotGal_${slot.id}" style="display:flex;align-items:center;gap:4px;padding:9px 12px;border:1.5px solid var(--red);border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:700;background:white;color:var(--red);" title="Galleria / CamScanner / PDF">ðŸ“ File</label>
+                           <label for="slotGal_${slot.id}" style="display:flex;align-items:center;gap:4px;padding:9px 12px;border:1.5px solid var(--red);border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:700;background:white;color:var(--red);" title="Galleria / CamScanner / PDF">📁 File</label>
                            <input type="file" id="slotGal_${slot.id}" accept="image/*,application/pdf" style="display:none;" onchange="caricaSlot('${slot.id}',this)">
                        </div>`
                 }
@@ -432,7 +432,7 @@ function fbPath(targa) {
 
 function initFirebase(targa) {
     if (!window._fbReady || !window._fb) {
-        updateSyncStatus(false, 'Firebase non configurato â€” modalitÃ  offline');
+        updateSyncStatus(false, 'Firebase non configurato — modalità offline');
         return;
     }
     // Evita doppia inizializzazione
@@ -444,14 +444,14 @@ function initFirebase(targa) {
     // 1. Nodo viaggio proprio (stato fasi live)
     const unsub1 = onValue(ref(db, fbPath(targa)), () => {
         fbConnected = true;
-        updateSyncStatus(true, 'Connesso Â· Live');
+        updateSyncStatus(true, 'Connesso · Live');
     }, () => {
         fbConnected = false;
         updateSyncStatus(false, 'Connessione persa');
     });
     fbUnsubscribers.push(unsub1);
 
-    // 2. Missioni dispatcher â€” ascolta in real-time
+    // 2. Missioni dispatcher — ascolta in real-time
     const unsub2 = onValue(ref(db, 'dispatcher/missions'), (snap) => {
         const data = snap.val();
         if (!data) return;
@@ -476,13 +476,13 @@ function initFirebase(targa) {
         }
         aggiornaHeroMissione(mia || null);
         if (isNuova) {
-            showToast('ðŸ“‹ Nuova missione assegnata',
-                `${mia.id} Â· ${estraiCitta(mia.from)} â†’ ${estraiCitta(mia.to)}`,
+            showToast('📋 Nuova missione assegnata',
+                `${mia.id} · ${estraiCitta(mia.from)} → ${estraiCitta(mia.to)}`,
                 'success');
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
         }
 
-        // Missioni terminate â€” filtrate per targa, ordinate per data
+        // Missioni terminate — filtrate per targa, ordinate per data
         const terminate = lista.filter(m =>
             (m.targa === targa || m.autistaTarga === targa || m.plate === targa) &&
             m.status === 'completed'
@@ -491,17 +491,17 @@ function initFirebase(targa) {
     });
     fbUnsubscribers.push(unsub2);
 
-    // Chat listener â€” inizializzato qui perchÃ© Firebase Ã¨ garantito pronto
+    // Chat listener — inizializzato qui perché Firebase è garantito pronto
     initChatDriver();
 }
 
 
 
-// â”€â”€ Storico missioni terminate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Storico missioni terminate ────────────────────────────────────────────────
 
 function _archiviaViaggio(targa) {
     try {
-        // Pulisci stato viaggio corrente â€” le missioni terminate vengono lette da Firebase
+        // Pulisci stato viaggio corrente — le missioni terminate vengono lette da Firebase
         saveTimestamps(targa, {});
         saveDocViaggio(targa, {});
     } catch(e) { console.warn('[archiviaViaggio]', e); }
@@ -516,22 +516,22 @@ function renderMissioniTerminate(lista) {
 
     card.style.display = 'block';
     list.innerHTML = lista.map(function(m) {
-        const id   = m.id || m.numeroOrdine || 'â€”';
+        const id   = m.id || m.numeroOrdine || '—';
         const da   = estraiCitta(m.from || m.origine || '');
         const a    = estraiCitta(m.to   || m.destinazione || '');
         const data = m.completedAt
             ? new Date(m.completedAt).toLocaleDateString('it-IT', { day:'2-digit', month:'short', year:'numeric' })
-            : 'â€”';
-        const cargo = m.cargo ? ('ðŸ“¦ ' + m.cargo) : '';
+            : '—';
+        const cargo = m.cargo ? ('📦 ' + m.cargo) : '';
         return '<div style="background:white;border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:3px solid #a5d6a7;">'
             + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">'
             + '<div style="flex:1;min-width:0;">'
             + '<div style="font-weight:800;font-size:0.88rem;color:var(--black);">' + id + '</div>'
-            + '<div style="font-size:0.82rem;font-weight:700;color:#333;margin-top:3px;">' + (da||'â€”') + ' â†’ ' + (a||'â€”') + '</div>'
+            + '<div style="font-size:0.82rem;font-weight:700;color:#333;margin-top:3px;">' + (da||'—') + ' → ' + (a||'—') + '</div>'
             + (cargo ? '<div style="font-size:0.72rem;color:var(--text-dim);margin-top:2px;">' + cargo + '</div>' : '')
             + '</div>'
             + '<div style="text-align:right;flex-shrink:0;">'
-            + '<div style="font-size:0.7rem;color:#2e7d32;font-weight:700;">âœ… Completata</div>'
+            + '<div style="font-size:0.7rem;color:#2e7d32;font-weight:700;">✅ Completata</div>'
             + '<div style="font-size:0.68rem;color:var(--text-dim);margin-top:2px;">' + data + '</div>'
             + '</div>'
             + '</div>'
@@ -545,15 +545,15 @@ function toggleMissioniTerminate() {
     if (!list) return;
     const open = list.style.display !== 'none';
     list.style.display    = open ? 'none' : 'block';
-    toggle.textContent    = open ? 'â–¶' : 'â–¼';
+    toggle.textContent    = open ? '▶' : '▼';
 }
-// Estrae il nome cittÃ  da un indirizzo
-// Gestisce formati: "Azienda, Via X, 33080 San Quirino PN, Italia" â†’ "San Quirino"
+// Estrae il nome città da un indirizzo
+// Gestisce formati: "Azienda, Via X, 33080 San Quirino PN, Italia" → "San Quirino"
 function estraiCitta(indirizzo) {
-    if (!indirizzo) return 'â€”';
+    if (!indirizzo) return '—';
     const parti = indirizzo.split(',').map(function(p) { return p.trim(); }).filter(Boolean);
     if (parti.length === 1) return parti[0];
-    // Cerca parte con CAP (4-5 cifre seguito da nome cittÃ )
+    // Cerca parte con CAP (4-5 cifre seguito da nome città)
     for (var i = 0; i < parti.length; i++) {
         var cap = parti[i].match(/^\d{4,5}\s+(.+)/);
         if (cap) {
@@ -561,7 +561,7 @@ function estraiCitta(indirizzo) {
             return cap[1].replace(/\s+[A-Z]{2}$/, '').trim();
         }
     }
-    // Nessun CAP â€” salta parti che sembrano vie o numeri
+    // Nessun CAP — salta parti che sembrano vie o numeri
     var via = /^(via|viale|piazza|corso|str\.|c\.|calle|av\.|pol\.|zona|loc\.|fraz\.)/i;
     var num = /^\d+$/;
     for (var j = 0; j < parti.length; j++) {
@@ -595,11 +595,11 @@ function aggiornaHeroMissione(m) {
     if (rottaWrap) rottaWrap.style.display = '';
     // Info cargo sotto rotta
     const info = [
-        m.cargo  ? `ðŸ“¦ ${m.cargo}`    : '',
-        m.weight ? `âš–ï¸ ${m.weight} t` : '',
-        m.date   ? `ðŸ“… ${m.date}`     : '',
-    ].filter(Boolean).join('  Â·  ');
-    if (targaLbl) targaLbl.textContent = info || (currentDriver ? 'ðŸš› ' + currentDriver.targa : '');
+        m.cargo  ? `📦 ${m.cargo}`    : '',
+        m.weight ? `⚖️ ${m.weight} t` : '',
+        m.date   ? `📅 ${m.date}`     : '',
+    ].filter(Boolean).join('  ·  ');
+    if (targaLbl) targaLbl.textContent = info || (currentDriver ? '🚛 ' + currentDriver.targa : '');
 
     // Aggiorna label missione nella sezione fasi
     const fasiLbl = document.getElementById('missioneFasiLabel');
@@ -612,11 +612,11 @@ function aggiornaHeroMissione(m) {
     // Aggiorna card percorso
     aggiornaPercorsoCard(m);
 
-    // Aggiorna visibilitÃ  fasi
+    // Aggiorna visibilità fasi
     if (typeof renderTimestamps === 'function') renderTimestamps();
 }
 
-// â”€â”€â”€ Card percorso DSP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Card percorso DSP ────────────────────────────────────────────────────────
 function aggiornaPercorsoCard(m) {
     const card        = document.getElementById('missionePercorsoCard');
     const divTappe    = document.getElementById('percorsoTappe');
@@ -628,7 +628,7 @@ function aggiornaPercorsoCard(m) {
     if (!m) { card.style.display = 'none'; return; }
     card.style.display = 'block';
 
-    // â”€â”€ Tappe / fermate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Tappe / fermate ───────────────────────────────────────────────
     // Il DSP salva: m.tappe = [{label, indirizzo, tipo:'carico'|'scarico'|'sosta'}]
     // oppure usa from/to come fallback
     const tappe = m.tappe || m.waypoints || m.fermate || null;
@@ -651,7 +651,7 @@ function aggiornaPercorsoCard(m) {
         }).join('');
         divTappe.style.display = 'block';
     } else if (m.from || m.to) {
-        // Fallback: from â†’ to semplice
+        // Fallback: from → to semplice
         const from = estraiCitta(m.from);
         const to   = estraiCitta(m.to);
         divTappe.innerHTML =
@@ -663,53 +663,53 @@ function aggiornaPercorsoCard(m) {
           + '<div style="flex:1;padding-bottom:6px;">'
           + '<div style="font-size:0.72rem;font-weight:700;color:#2e7d32;text-transform:uppercase;letter-spacing:0.8px;">Carico</div>'
           + '<div style="font-size:0.8rem;color:#333;margin-top:1px;">' + from + '</div>'
-          + ((m.date || m.oraCaricoFine) ? '<div style="font-size:0.72rem;color:#2e7d32;font-weight:600;margin-top:2px;">ðŸ“… ' + (m.date||'') + (m.oraCaricoFine ? '  â° '+m.oraCaricoFine : '') + '</div>' : '')
+          + ((m.date || m.oraCaricoFine) ? '<div style="font-size:0.72rem;color:#2e7d32;font-weight:600;margin-top:2px;">📅 ' + (m.date||'') + (m.oraCaricoFine ? '  ⏰ '+m.oraCaricoFine : '') + '</div>' : '')
           + '</div></div>'
           + '<div style="display:flex;gap:10px;align-items:flex-start;">'
           + '<div style="flex-shrink:0;"><div style="width:10px;height:10px;border-radius:50%;background:#E30613;border:2px solid white;box-shadow:0 0 0 2px #E30613;margin-top:3px;"></div></div>'
           + '<div style="flex:1;">'
           + '<div style="font-size:0.72rem;font-weight:700;color:#E30613;text-transform:uppercase;letter-spacing:0.8px;">Scarico</div>'
           + '<div style="font-size:0.8rem;color:#333;margin-top:1px;">' + to + '</div>'
-          + ((m.dateScarico || m.oraScaricoFine) ? '<div style="font-size:0.72rem;color:#E30613;font-weight:600;margin-top:2px;">ðŸ“… ' + (m.dateScarico||'') + (m.oraScaricoFine ? '  â° '+m.oraScaricoFine : '') + '</div>' : '')
+          + ((m.dateScarico || m.oraScaricoFine) ? '<div style="font-size:0.72rem;color:#E30613;font-weight:600;margin-top:2px;">📅 ' + (m.dateScarico||'') + (m.oraScaricoFine ? '  ⏰ '+m.oraScaricoFine : '') + '</div>' : '')
           + '</div></div>';
         divTappe.style.display = 'block';
     } else {
         divTappe.style.display = 'none';
     }
 
-    // â”€â”€ Metriche (km, durata, ETA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Metriche (km, durata, ETA) ────────────────────────────────────
     // Il DSP salva: m.distanzaKm, m.durataMin, m.etaArrivo, m.pedaggi
     const metriche = [];
     // Data e ora carico
     if (m.date || m.oraCaricoFine) {
         const dc = (m.date || '') + (m.oraCaricoFine ? '  ' + m.oraCaricoFine : '');
-        metriche.push({ icon: 'ðŸŸ¢', label: 'Carico', val: dc.trim() });
+        metriche.push({ icon: '🟢', label: 'Carico', val: dc.trim() });
     }
     // Data e ora scarico
     if (m.dateScarico || m.oraScaricoFine) {
         const ds = (m.dateScarico || '') + (m.oraScaricoFine ? '  ' + m.oraScaricoFine : '');
-        metriche.push({ icon: 'ðŸ”´', label: 'Scarico', val: ds.trim() });
+        metriche.push({ icon: '🔴', label: 'Scarico', val: ds.trim() });
     }
     if (m.distanzaKm || m.distanza) {
-        metriche.push({ icon: 'ðŸ“', label: 'Distanza', val: (m.distanzaKm || m.distanza) + ' km' });
+        metriche.push({ icon: '📏', label: 'Distanza', val: (m.distanzaKm || m.distanza) + ' km' });
     }
     if (m.durataMin || m.durata) {
         const min = parseInt(m.durataMin || m.durata);
         const hhh = min >= 60 ? Math.floor(min/60) + 'h ' + (min%60) + 'min' : min + ' min';
-        metriche.push({ icon: 'â±ï¸', label: 'Percorso', val: hhh });
+        metriche.push({ icon: '⏱️', label: 'Percorso', val: hhh });
     }
     if (m.etaArrivo || m.eta) {
-        metriche.push({ icon: 'ðŸ•', label: 'ETA', val: m.etaArrivo || m.eta });
+        metriche.push({ icon: '🕐', label: 'ETA', val: m.etaArrivo || m.eta });
     }
     if (m.pedaggi !== undefined) {
-        metriche.push({ icon: 'ðŸ’¶', label: 'Pedaggi', val: (m.pedaggi || '0') + ' â‚¬' });
+        metriche.push({ icon: '💶', label: 'Pedaggi', val: (m.pedaggi || '0') + ' €' });
     }
-    // m.date giÃ  gestito sopra come "Data Carico"
+    // m.date già gestito sopra come "Data Carico"
     if (m.cargo) {
-        metriche.push({ icon: 'ðŸ“¦', label: 'Carico', val: m.cargo });
+        metriche.push({ icon: '📦', label: 'Carico', val: m.cargo });
     }
     if (m.weight) {
-        metriche.push({ icon: 'âš–ï¸', label: 'Peso', val: m.weight + ' t' });
+        metriche.push({ icon: '⚖️', label: 'Peso', val: m.weight + ' t' });
     }
 
     if (metriche.length) {
@@ -725,7 +725,7 @@ function aggiornaPercorsoCard(m) {
         divMet.style.display = 'none';
     }
 
-    // â”€â”€ Note dispatcher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Note dispatcher ───────────────────────────────────────────────
     // Il DSP salva: m.note, m.istruzioni, m.annotazioni
     const note = m.note || m.istruzioni || m.annotazioni || '';
     if (note) {
@@ -735,7 +735,7 @@ function aggiornaPercorsoCard(m) {
         divNote.style.display = 'none';
     }
 
-    // Placeholder solo se non c'Ã¨ NULLA
+    // Placeholder solo se non c'è NULLA
     const hasContent = (tappe && tappe.length) || (m.from || m.to) || metriche.length || note;
     if (divPh) divPh.style.display = hasContent ? 'none' : 'block';
 }
@@ -762,7 +762,7 @@ async function pushToFirebase(targa) {
     const docs = loadDocViaggio(targa);
     const driver = currentDriver;
 
-    // Build payload â€” NO immagini base64 (troppo pesanti per Realtime DB)
+    // Build payload — NO immagini base64 (troppo pesanti per Realtime DB)
     // Immagini: solo metadati (nome file, presenza/assenza)
     const docsMetadata = {};
     DOC_SLOTS.forEach(slot => {
@@ -806,7 +806,7 @@ async function chiudiViaggio() {
         return;
     }
 
-    if (!confirm('Chiudere il viaggio? Questa operazione Ã¨ irreversibile. I dati verranno inviati alla centrale.')) return;
+    if (!confirm('Chiudere il viaggio? Questa operazione è irreversibile. I dati verranno inviati alla centrale.')) return;
 
     // Spinner sul bottone
     const btn = document.getElementById('btnChiudiViaggio');
@@ -825,7 +825,7 @@ async function chiudiViaggio() {
     // Push stato viaggio al Realtime DB
     const sent = await pushToFirebase(targa);
 
-    // â”€â”€ Archiviazione Firebase Storage (best-effort, non bloccante) â”€â”€
+    // ── Archiviazione Firebase Storage (best-effort, non bloccante) ──
     if (window._fbStorage && missioneCorrente) {
         const _storageUpload = async () => {
             const { storage, sRef, uploadBytes } = window._fbStorage;
@@ -841,14 +841,14 @@ async function chiudiViaggio() {
         _storageUpload().catch(e => console.warn('[Archivio] Storage non disponibile (file://):', e.message));
     }
 
-    // â”€â”€ Aggiorna status missione nel dispatcher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Aggiorna status missione nel dispatcher ──────────────────────
     if (missioneCorrente && window._fb) {
         try {
             const { db, ref, get, update } = window._fb;
             const snap = await get(ref(db, 'dispatcher/missions'));
             if (snap.exists()) {
                 const lista = snap.val();
-                // lista puÃ² essere array o object
+                // lista può essere array o object
                 const entries = Array.isArray(lista)
                     ? lista.map((m, i) => [String(i), m])
                     : Object.entries(lista);
@@ -868,16 +868,16 @@ async function chiudiViaggio() {
         } catch(e) { console.warn('[chiudiViaggio] FB update error:', e); }
     }
 
-    // â”€â”€ Archivia missione locale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // missioneSnap Ã¨ stata catturata prima dell'azzeramento
+    // ── Archivia missione locale ──────────────────────────────────────
+    // missioneSnap è stata catturata prima dell'azzeramento
     _archiviaViaggio(targa, missioneSnap);
 
     if (sent) {
-        updateSyncStatus(true, 'Viaggio chiuso Â· Dati inviati âœ“');
+        updateSyncStatus(true, 'Viaggio chiuso · Dati inviati ✓');
         showToast('Viaggio chiuso!', 'Dati archiviati e inviati alla centrale', 'success');
     } else {
         showToast('Viaggio chiuso (offline)', 'Sincronizzazione in sospeso', 'warning');
-        updateSyncStatus(false, 'Offline â€” sincronizzazione in sospeso');
+        updateSyncStatus(false, 'Offline — sincronizzazione in sospeso');
     }
 
     // Re-abilita il bottone in ogni caso
@@ -1049,7 +1049,7 @@ function avviaAppFull(driver) {
             storico.forEach(r => { if (r.data && r.data.startsWith(meseCurr) && r.chiuso) setGiorni.add(r.data); });
             giorniPresenti = setGiorni.size;
         } catch(e) {}
-        // Aggiungi oggi se c'Ã¨ un rapportino aperto
+        // Aggiungi oggi se c'è un rapportino aperto
         try {
             const rap = JSON.parse(localStorage.getItem('ibs_rap_' + targa));
             if (rap && rap.data && rap.data.startsWith(meseCurr)) giorniPresenti = Math.max(giorniPresenti, 1);
@@ -1059,10 +1059,10 @@ function avviaAppFull(driver) {
     document.getElementById('chatDot').style.display = 'block';
     renderDocumenti(driver.targa);
     renderTimestamps();
-    renderMissioniTerminate([]); // verrÃ  aggiornato dal listener Firebase
+    renderMissioniTerminate([]); // verrà aggiornato dal listener Firebase
     initRapportino();
     // Init Firebase listener per questa targa
-    // (initChatDriver viene chiamata dentro initFirebase, dopo che _fbReady Ã¨ confermato)
+    // (initChatDriver viene chiamata dentro initFirebase, dopo che _fbReady è confermato)
     if (window._fbReady) {
         initFirebase(driver.targa);
     } else {
@@ -1129,7 +1129,7 @@ function initRapportino() {
     // Header
     const dateStr = new Date().toLocaleDateString('it-IT', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
     document.getElementById('rapDataOggi').textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-    document.getElementById('rapTargaHeader').textContent = targa + ' Â· ' + currentDriver.nome;
+    document.getElementById('rapTargaHeader').textContent = targa + ' · ' + currentDriver.nome;
 
     renderRapportino(rap);
     renderStoricoRapportini(targa);
@@ -1219,7 +1219,7 @@ function renderRapportino(rap) {
             const isGasolio = r.tipo === 'GASOLIO';
             const borderCol = isGasolio ? 'var(--red)' : '#1565c0';
             const badgeBg = isGasolio ? 'var(--red)' : '#1565c0';
-            const emoji = isGasolio ? 'ðŸ›¢ï¸' : 'ðŸ’§';
+            const emoji = isGasolio ? '🛢️' : '💧';
             return `
             <div style="background:var(--gray);border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:4px solid ${borderCol};">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
@@ -1229,14 +1229,14 @@ function renderRapportino(rap) {
                             <span style="font-size:0.72rem;color:var(--text-dim);">${r.ora || ''}</span>
                         </div>
                         <div style="display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;">
-                            <span style="font-size:1rem;font-weight:800;color:var(--red);">â‚¬ ${r.totale}</span>
-                            <span style="font-size:0.78rem;color:var(--text-dim);">${r.litri} L Ã— â‚¬ ${r.prezzo}/L</span>
+                            <span style="font-size:1rem;font-weight:800;color:var(--red);">€ ${r.totale}</span>
+                            <span style="font-size:0.78rem;color:var(--text-dim);">${r.litri} L × € ${r.prezzo}/L</span>
                         </div>
 
                         ${r.scontrinoThumb ? `
                         <div style="margin-top:8px;">
                             <img src="${r.scontrinoThumb}" style="height:60px;border-radius:6px;border:2px solid var(--green);object-fit:cover;cursor:pointer;" onclick="apriScontrino('${i}')" />
-                            <div style="font-size:0.68rem;color:var(--green);font-weight:700;margin-top:3px;">âœ“ Scontrino allegato</div>
+                            <div style="font-size:0.68rem;color:var(--green);font-weight:700;margin-top:3px;">✓ Scontrino allegato</div>
                         </div>` : ''}
                     </div>
                     ${!rap.chiuso ? `<button onclick="eliminaRifornimento(${i})" style="background:none;border:none;cursor:pointer;padding:4px;flex-shrink:0;">
@@ -1252,13 +1252,19 @@ function renderRapportino(rap) {
         document.getElementById('sostaBox').style.display = 'block';
         document.getElementById('sostaFlag').textContent = rap.sostaNotturna.flag;
         document.getElementById('sostaPaese').textContent = rap.sostaNotturna.paese;
+        const ccEl = document.getElementById('sostaCittaCap');
+        if (ccEl) {
+            const cap = rap.sostaNotturna.cap || '';
+            const citta = rap.sostaNotturna.citta || '';
+            ccEl.textContent = [cap, citta].filter(Boolean).join(' – ');
+        }
         const isEstero = rap.sostaNotturna.codice !== 'IT';
         const tb = document.getElementById('trasfertaBadge');
         if (isEstero) {
-            tb.textContent = 'ðŸŒ Trasferta Estero';
+            tb.textContent = '🌍 Trasferta Estero';
             tb.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:25px;font-weight:700;font-size:0.9rem;background:var(--red);color:white;';
         } else {
-            tb.textContent = 'ðŸ‡®ðŸ‡¹ Lavoro Italia';
+            tb.textContent = '🇮🇹 Lavoro Italia';
             tb.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:25px;font-weight:700;font-size:0.9rem;background:#009246;color:white;';
         }
     } else {
@@ -1343,7 +1349,7 @@ function salvaTratta() {
     saveRapportino(rap);
     chiudiModal('modalTratta');
     renderRapportino(rap);
-    showToast('Tratta aggiunta', `${da} â†’ ${a} Â· ${km} km`, 'success');
+    showToast('Tratta aggiunta', `${da} → ${a} · ${km} km`, 'success');
 }
 
 function eliminaTratta(index) {
@@ -1364,7 +1370,7 @@ function apriModalRif() {
     document.getElementById('rifPrezzo').value = '';
     document.querySelectorAll('#btn-gasolio, #btn-adblue').forEach(b => b.classList.remove('selected'));
     document.getElementById('rifTotaleBox').style.display = 'none';
-    document.getElementById('rifTotaleVal').textContent = 'â‚¬ 0.00';
+    document.getElementById('rifTotaleVal').textContent = '€ 0.00';
     scontrinoDataUrl = null;
     document.getElementById('rifScontrinoPreview').style.display = 'none';
     document.getElementById('rifScontrinoZoneWrap').style.display = '';
@@ -1391,7 +1397,7 @@ function calcolaImporto() {
     const prezzo = parseFloat(document.getElementById('rifPrezzo').value) || 0;
     if (litri > 0 && prezzo > 0) {
         const totale = (litri * prezzo).toFixed(2);
-        document.getElementById('rifTotaleVal').textContent = 'â‚¬ ' + totale;
+        document.getElementById('rifTotaleVal').textContent = '€ ' + totale;
         document.getElementById('rifTotaleBox').style.display = 'block';
     } else {
         document.getElementById('rifTotaleBox').style.display = 'none';
@@ -1407,7 +1413,7 @@ function gestisciScontrino(input) {
         scontrinoDataUrl = e.target.result;
         // Per PDF mostra icona placeholder, per immagini mostra preview
         if (isPdf) {
-            document.getElementById('rifScontrinoImg').src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="140" viewBox="0 0 200 140"><rect width="200" height="140" fill="%23f5f5f5" rx="8"/><text x="100" y="55" text-anchor="middle" font-size="40">ðŸ“„</text><text x="100" y="90" text-anchor="middle" font-family="sans-serif" font-size="13" fill="%23555" font-weight="bold">PDF allegato</text><text x="100" y="110" text-anchor="middle" font-family="sans-serif" font-size="11" fill="%23999">' + file.name + '</text></svg>';
+            document.getElementById('rifScontrinoImg').src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="140" viewBox="0 0 200 140"><rect width="200" height="140" fill="%23f5f5f5" rx="8"/><text x="100" y="55" text-anchor="middle" font-size="40">📄</text><text x="100" y="90" text-anchor="middle" font-family="sans-serif" font-size="13" fill="%23555" font-weight="bold">PDF allegato</text><text x="100" y="110" text-anchor="middle" font-family="sans-serif" font-size="11" fill="%23999">' + file.name + '</text></svg>';
         } else {
             document.getElementById('rifScontrinoImg').src = scontrinoDataUrl;
         }
@@ -1465,7 +1471,7 @@ function salvaRifornimento() {
     scontrinoDataUrl = null;
     chiudiModal('modalRif');
     renderRapportino(rap);
-    showToast('Rifornimento salvato', `${tipo} Â· ${litri.toFixed(1)} L Â· â‚¬ ${totale}`, 'success');
+    showToast('Rifornimento salvato', `${tipo} · ${litri.toFixed(1)} L · € ${totale}`, 'success');
 }
 
 function eliminaRifornimento(index) {
@@ -1487,25 +1493,25 @@ function salvaNoteDraft() {
 
 // Mappa paesi per reverse geocoding
 const PAESI_INFO = {
-    'IT': { nome: 'Italia', flag: 'ðŸ‡®ðŸ‡¹' },
-    'FR': { nome: 'Francia', flag: 'ðŸ‡«ðŸ‡·' },
-    'ES': { nome: 'Spagna', flag: 'ðŸ‡ªðŸ‡¸' },
-    'DE': { nome: 'Germania', flag: 'ðŸ‡©ðŸ‡ª' },
-    'AT': { nome: 'Austria', flag: 'ðŸ‡¦ðŸ‡¹' },
-    'CH': { nome: 'Svizzera', flag: 'ðŸ‡¨ðŸ‡­' },
-    'SI': { nome: 'Slovenia', flag: 'ðŸ‡¸ðŸ‡®' },
-    'HR': { nome: 'Croazia', flag: 'ðŸ‡­ðŸ‡·' },
-    'PT': { nome: 'Portogallo', flag: 'ðŸ‡µðŸ‡¹' },
-    'BE': { nome: 'Belgio', flag: 'ðŸ‡§ðŸ‡ª' },
-    'NL': { nome: 'Paesi Bassi', flag: 'ðŸ‡³ðŸ‡±' },
-    'PL': { nome: 'Polonia', flag: 'ðŸ‡µðŸ‡±' },
-    'CZ': { nome: 'Repubblica Ceca', flag: 'ðŸ‡¨ðŸ‡¿' },
-    'SK': { nome: 'Slovacchia', flag: 'ðŸ‡¸ðŸ‡°' },
-    'HU': { nome: 'Ungheria', flag: 'ðŸ‡­ðŸ‡º' },
-    'RO': { nome: 'Romania', flag: 'ðŸ‡·ðŸ‡´' },
-    'BG': { nome: 'Bulgaria', flag: 'ðŸ‡§ðŸ‡¬' },
-    'GR': { nome: 'Grecia', flag: 'ðŸ‡¬ðŸ‡·' },
-    'LU': { nome: 'Lussemburgo', flag: 'ðŸ‡±ðŸ‡º' },
+    'IT': { nome: 'Italia', flag: '🇮🇹' },
+    'FR': { nome: 'Francia', flag: '🇫🇷' },
+    'ES': { nome: 'Spagna', flag: '🇪🇸' },
+    'DE': { nome: 'Germania', flag: '🇩🇪' },
+    'AT': { nome: 'Austria', flag: '🇦🇹' },
+    'CH': { nome: 'Svizzera', flag: '🇨🇭' },
+    'SI': { nome: 'Slovenia', flag: '🇸🇮' },
+    'HR': { nome: 'Croazia', flag: '🇭🇷' },
+    'PT': { nome: 'Portogallo', flag: '🇵🇹' },
+    'BE': { nome: 'Belgio', flag: '🇧🇪' },
+    'NL': { nome: 'Paesi Bassi', flag: '🇳🇱' },
+    'PL': { nome: 'Polonia', flag: '🇵🇱' },
+    'CZ': { nome: 'Repubblica Ceca', flag: '🇨🇿' },
+    'SK': { nome: 'Slovacchia', flag: '🇸🇰' },
+    'HU': { nome: 'Ungheria', flag: '🇭🇺' },
+    'RO': { nome: 'Romania', flag: '🇷🇴' },
+    'BG': { nome: 'Bulgaria', flag: '🇧🇬' },
+    'GR': { nome: 'Grecia', flag: '🇬🇷' },
+    'LU': { nome: 'Lussemburgo', flag: '🇱🇺' },
 };
 
 function chiudiSoloTrasferta() {
@@ -1542,7 +1548,7 @@ function chiudiRapportino() {
         showToast('Nessuna tratta', 'Aggiungi almeno una tratta prima di chiudere', 'warning');
         return;
     }
-    if (!confirm('Chiudere il rapportino di oggi? Il GPS rileverÃ  la tua posizione per la sosta notturna.')) return;
+    if (!confirm('Chiudere il rapportino di oggi? Il GPS rileverà la tua posizione per la sosta notturna.')) return;
 
     // Mostra spinner nel bottone
     const btn = document.getElementById('btnChiudiRapportino');
@@ -1564,18 +1570,21 @@ function chiudiRapportino() {
 }
 
 async function finalizzaRapportino(rap, lat, lng) {
-    let sostaNotturna = { paese: 'Sconosciuta', codice: '??', flag: 'ðŸ³ï¸' };
+    let sostaNotturna = { paese: 'Sconosciuta', codice: '??', flag: '🏳️', cap: '', citta: '' };
 
     if (lat !== null && lng !== null) {
         try {
             // Nominatim OpenStreetMap - free, no API key
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=it`);
             const data = await res.json();
-            const codice = (data.address && data.address.country_code ? data.address.country_code.toUpperCase() : '??');
-            const info = PAESI_INFO[codice] || { nome: (data.address && data.address.country) || 'Sconosciuto', flag: 'ðŸ³ï¸' };
-            sostaNotturna = { paese: info.nome, codice, flag: info.flag, lat, lng };
+            const addr = data.address || {};
+            const codice = (addr.country_code ? addr.country_code.toUpperCase() : '??');
+            const info = PAESI_INFO[codice] || { nome: addr.country || 'Sconosciuto', flag: '🏳️' };
+            const cap = addr.postcode || '';
+            const citta = addr.city || addr.town || addr.village || addr.municipality || addr.county || '';
+            sostaNotturna = { paese: info.nome, codice, flag: info.flag, cap, citta, lat, lng };
         } catch(e) {
-            sostaNotturna = { paese: 'Errore rilevamento', codice: '??', flag: 'ðŸ³ï¸' };
+            sostaNotturna = { paese: 'Errore rilevamento', codice: '??', flag: '🏳️', cap: '', citta: '' };
         }
     }
 
@@ -1594,7 +1603,7 @@ async function finalizzaRapportino(rap, lat, lng) {
     renderStoricoRapportini(currentDriver.targa);
 
     const isEstero = sostaNotturna.codice !== 'IT' && sostaNotturna.codice !== '??';
-    showToast('Rapportino chiuso!', `${sostaNotturna.flag} ${sostaNotturna.paese} Â· ${isEstero ? 'Trasferta Estero' : 'Lavoro Italia'}`, 'success');
+    showToast('Rapportino chiuso!', `${sostaNotturna.flag} ${sostaNotturna.paese} · ${isEstero ? 'Trasferta Estero' : 'Lavoro Italia'}`, 'success');
 }
 
 function renderStoricoRapportini(targa) {
@@ -1609,14 +1618,14 @@ function renderStoricoRapportini(targa) {
         const data = new Date(r.data).toLocaleDateString('it-IT', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
         const isEstero = r.sostaNotturna && r.sostaNotturna.codice !== 'IT' && r.sostaNotturna.codice !== '??';
         const borderColor = isEstero ? 'var(--yellow)' : 'var(--red)';
-        const flag = r.sostaNotturna ? r.sostaNotturna.flag : 'â€”';
+        const flag = r.sostaNotturna ? r.sostaNotturna.flag : '—';
         return `
         <div onclick="apriDettaglioRap(${i})" style="background:white;border-radius:10px;padding:14px;margin-bottom:8px;border-left:4px solid ${borderColor};box-shadow:0 2px 8px rgba(0,0,0,0.06);cursor:pointer;transition:transform 0.15s;" onmouseover="this.style.transform='translateX(3px)'" onmouseout="this.style.transform=''">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <div>
                     <div style="font-weight:700;font-size:0.88rem;">${data}</div>
                     <div style="font-size:0.75rem;color:var(--text-dim);margin-top:3px;">
-                        ${r.tratte.length} tratte Â· <strong style="color:var(--red)">${r.kmTotali} km</strong>
+                        ${r.tratte.length} tratte · <strong style="color:var(--red)">${r.kmTotali} km</strong>
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
@@ -1647,9 +1656,10 @@ function apriDettaglioRap(index) {
         <div style="background:white;border:2px solid var(--yellow);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px;">
             <div style="font-size:2.5rem;">${r.sostaNotturna.flag}</div>
             <div style="font-weight:800;font-size:1rem;margin-top:4px;">${r.sostaNotturna.paese}</div>
+            ${(r.sostaNotturna.cap || r.sostaNotturna.citta) ? `<div style="font-size:0.88rem;color:var(--text-dim);margin-top:3px;">${[r.sostaNotturna.cap, r.sostaNotturna.citta].filter(Boolean).join(' – ')}</div>` : ''}
             <div style="margin-top:8px;">
                 <span style="display:inline-flex;padding:5px 14px;border-radius:20px;font-weight:700;font-size:0.82rem;${isEstero ? 'background:var(--red);color:white;' : 'background:#009246;color:white;'}">
-                    ${isEstero ? 'ðŸŒ Trasferta Estero' : 'ðŸ‡®ðŸ‡¹ Lavoro Italia'}
+                    ${isEstero ? '🌍 Trasferta Estero' : '🇮🇹 Lavoro Italia'}
                 </span>
             </div>
         </div>` : ''}
@@ -1680,16 +1690,16 @@ function apriDettaglioRap(index) {
                 <div style="background:var(--gray);border-radius:8px;padding:10px 12px;margin-bottom:6px;border-left:3px solid ${rf.tipo === 'GASOLIO' ? 'var(--red)' : '#1565c0'};">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
                         <div>
-                            <span style="font-size:0.72rem;font-weight:700;color:${rf.tipo === 'GASOLIO' ? 'var(--red)' : '#1565c0'};">${rf.tipo === 'GASOLIO' ? 'ðŸ›¢ï¸' : 'ðŸ’§'} ${rf.tipo}</span>
-                            <div style="font-weight:800;font-size:0.9rem;color:var(--red);margin-top:2px;">â‚¬ ${rf.totale}</div>
-                            <div style="font-size:0.72rem;color:var(--text-dim);">${rf.litri} L Ã— â‚¬ ${rf.prezzo}/L</div>
+                            <span style="font-size:0.72rem;font-weight:700;color:${rf.tipo === 'GASOLIO' ? 'var(--red)' : '#1565c0'};">${rf.tipo === 'GASOLIO' ? '🛢️' : '💧'} ${rf.tipo}</span>
+                            <div style="font-weight:800;font-size:0.9rem;color:var(--red);margin-top:2px;">€ ${rf.totale}</div>
+                            <div style="font-size:0.72rem;color:var(--text-dim);">${rf.litri} L × € ${rf.prezzo}/L</div>
                         </div>
                         ${rf.scontrinoThumb ? `<img src="${rf.scontrinoThumb}" style="height:50px;width:40px;object-fit:cover;border-radius:5px;border:1px solid var(--green);margin-left:8px;flex-shrink:0;" />` : '<span style="font-size:0.68rem;color:#f44;margin-left:8px;">No scontrino</span>'}
                     </div>
                 </div>`).join('')}
             <div style="background:linear-gradient(135deg,var(--red),var(--dark-red));border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-size:0.75rem;color:rgba(255,255,255,0.85);font-weight:700;text-transform:uppercase;letter-spacing:1px;">Totale rifornimenti</span>
-                <span style="font-size:1.1rem;font-weight:800;color:white;">â‚¬ ${r.rifornimenti.reduce((s,rf)=>s+parseFloat(rf.totale||0),0).toFixed(2)}</span>
+                <span style="font-size:1.1rem;font-weight:800;color:white;">€ ${r.rifornimenti.reduce((s,rf)=>s+parseFloat(rf.totale||0),0).toFixed(2)}</span>
             </div>
         </div>` : ''}
     `;
@@ -1711,7 +1721,7 @@ function showSection(id, btn) {
 // Struttura: chat/{driverCode}/{pushId} = { from, text, time, mine, ts }
 let chatMsgCount = 0; // per tracciare non letti
 
-// â”€â”€ Audio ding â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Audio ding ────────────────────────────────────────────────────
 function playDing() {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1728,7 +1738,7 @@ function playDing() {
     } catch(e) {}
 }
 
-// â”€â”€ Notifiche Push browser â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Notifiche Push browser ────────────────────────────────────────
 function richiediPermessoNotifiche() {
     if (!('Notification' in window)) return;
     if (Notification.permission === 'default') Notification.requestPermission();
@@ -1737,7 +1747,7 @@ function richiediPermessoNotifiche() {
 function inviaNotificaPush(testo) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     try {
-        const n = new Notification('ðŸ“¨ Centrale', {
+        const n = new Notification('📨 Centrale', {
             body: testo,
             icon: '/logo.jpeg',
             tag: 'chat-centrale',
@@ -1785,7 +1795,7 @@ function renderChatMessages(msgs) {
         c.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#bbb;font-size:0.85rem;">Nessun messaggio dalla centrale</div>';
     } else {
         c.innerHTML = msgs.map(m => {
-            // Usa SOLO 'from' â€” il campo 'mine' Ã¨ inaffidabile (il DSP lo salva sempre true)
+            // Usa SOLO 'from' — il campo 'mine' è inaffidabile (il DSP lo salva sempre true)
             const isDriver = currentDriver && (
                 m.from === currentDriver.nome ||
                 m.from === currentDriver.code
@@ -1824,9 +1834,9 @@ async function inviaMsg() {
 function scrollChat() { const c = document.getElementById('chatMessages'); if(c) c.scrollTop = c.scrollHeight; }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// GPS TRACKING CONTINUO â€” Background safe
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════
+// GPS TRACKING CONTINUO — Background safe
+// ════════════════════════════════════════════════════
 let gpsWatchId     = null;   // navigator.geolocation.watchPosition handle
 let gpsLastLat     = null;
 let gpsLastLng     = null;
@@ -1894,9 +1904,9 @@ async function avviaGPSTracking() {
     fermaGPSTracking();
     aggiornaUIGPS('searching');
 
-    // â”€â”€ MODALITÃ€ 1: Plugin nativo Capacitor (APK) â”€â”€
+    // ── MODALITÀ 1: Plugin nativo Capacitor (APK) ──
     // Il Foreground Service Android mantiene il GPS attivo anche
-    // con schermo spento â€” nessuna sospensione possibile
+    // con schermo spento — nessuna sospensione possibile
     const cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IbsLocation;
     if (cap) {
         try {
@@ -1908,7 +1918,7 @@ async function avviaGPSTracking() {
                 currentLng = lng;
                 await inviaGPSFirebase(lat, lng, acc);
                 aggiornaUIGPS('ok');
-                // Aggiorna velocitÃ  se disponibile
+                // Aggiorna velocità se disponibile
                 if (speed > 0) {
                     const elSpd = document.getElementById('gpsSpeed');
                     if (elSpd) elSpd.textContent = Math.round(speed) + ' km/h';
@@ -1922,9 +1932,9 @@ async function avviaGPSTracking() {
         }
     }
 
-    // â”€â”€ MODALITÃ€ 2: Browser / WebView senza plugin (fallback) â”€â”€
-    // watchPosition funziona mentre l'app Ã¨ visibile.
-    // Su Android WebView viene sospeso dallo schermo spento â€”
+    // ── MODALITÀ 2: Browser / WebView senza plugin (fallback) ──
+    // watchPosition funziona mentre l'app è visibile.
+    // Su Android WebView viene sospeso dallo schermo spento —
     // il keepAlive lo rileva e ritrasmette l'ultima posizione nota.
     if (!navigator.geolocation) {
         showToast('GPS non disponibile', 'Attiva la localizzazione nelle impostazioni', 'error');
@@ -1952,7 +1962,7 @@ async function avviaGPSTracking() {
         { enableHighAccuracy: true, timeout: GPS_TIMEOUT_MS, maximumAge: GPS_MAX_AGE_MS }
     );
 
-    // keepAlive: rileva se watchPosition Ã¨ stato sospeso (gap >25s)
+    // keepAlive: rileva se watchPosition è stato sospeso (gap >25s)
     // e ritrasmette l'ultima posizione nota per mantenere il segnale
     gpsKeepAliveId = setInterval(async () => {
         if (gpsLastLat && gpsLastLng) {
@@ -2041,7 +2051,7 @@ function avviaNavi() {
         }
     }
 
-    // Se non ci sono tappe, usa from â†’ to della missione come waypoint
+    // Se non ci sono tappe, usa from → to della missione come waypoint
     if (!waypoints.length && missioneCorrente) {
         if (missioneCorrente.from) waypoints.push(missioneCorrente.from);
         if (missioneCorrente.to)   waypoints.push(missioneCorrente.to);
@@ -2067,7 +2077,7 @@ function avviaNavi() {
         + '&length='  + MEZZO.length
         + '&width='   + MEZZO.width;
 
-    // Aggiungi waypoint intermedi (tutto tranne ultimo che Ã¨ la destinazione)
+    // Aggiungi waypoint intermedi (tutto tranne ultimo che è la destinazione)
     for (var i = 0; i < waypoints.length - 1; i++) {
         url += '&waypoint[' + i + ']=' + encodeURIComponent(waypoints[i]);
     }
