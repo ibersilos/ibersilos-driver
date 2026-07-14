@@ -276,8 +276,8 @@ function eseguiFase() {
 
 // ====== DOCUMENTI VIAGGIO ======
 const DOC_SLOTS = [
-    { id: 'cmr',   label: 'CMR',              icon: '📋', obbligatorio: true },
-    { id: 'bolla', label: 'Bolla di consegna', icon: '📄', obbligatorio: true },
+    { id: 'cmr',   label: 'CMR',              icon: '📋', obbligatorio: false },
+    { id: 'bolla', label: 'Bolla di consegna', icon: '📄', obbligatorio: false },
 ];
 
 function docViaggioKey(targa) { return 'ibs_docviaggio_' + targa; }
@@ -1546,6 +1546,11 @@ function chiudiRapportino() {
     const rap = loadRapportino(currentDriver.targa);
     if (rap.tratte.length === 0) {
         showToast('Nessuna tratta', 'Aggiungi almeno una tratta prima di chiudere', 'warning');
+        return;
+    }
+    const docs = loadDocViaggio(currentDriver.targa);
+    if (!docs.cmr && !docs.bolla) {
+        showToast('Documento mancante', 'Carica almeno CMR o Bolla di consegna prima di chiudere', 'error');
         return;
     }
     if (!confirm('Chiudere il rapportino di oggi? Il GPS rileverà la tua posizione per la sosta notturna.')) return;
