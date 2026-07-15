@@ -1523,10 +1523,14 @@ function chiudiSoloTrasferta() {
     btn.disabled = true;
 
     if (navigator.geolocation) {
+        let gpsDone = false;
+        const gpsGuard = setTimeout(() => {
+            if (!gpsDone) { gpsDone = true; finalizzaRapportino(rap, null, null); }
+        }, 10000);
         navigator.geolocation.getCurrentPosition(
-            pos => finalizzaRapportino(rap, pos.coords.latitude, pos.coords.longitude),
-            ()  => finalizzaRapportino(rap, null, null),
-            { timeout: 8000, enableHighAccuracy: true }
+            pos => { if (!gpsDone) { gpsDone = true; clearTimeout(gpsGuard); finalizzaRapportino(rap, pos.coords.latitude, pos.coords.longitude); } },
+            ()  => { if (!gpsDone) { gpsDone = true; clearTimeout(gpsGuard); finalizzaRapportino(rap, null, null); } },
+            { timeout: 8000, enableHighAccuracy: false }
         );
     } else {
         finalizzaRapportino(rap, null, null);
@@ -1553,10 +1557,14 @@ function chiudiRapportino() {
     rap.oreGuida = ore;
 
     if (navigator.geolocation) {
+        let gpsDone = false;
+        const gpsGuard = setTimeout(() => {
+            if (!gpsDone) { gpsDone = true; finalizzaRapportino(rap, null, null); }
+        }, 10000);
         navigator.geolocation.getCurrentPosition(
-            pos => finalizzaRapportino(rap, pos.coords.latitude, pos.coords.longitude),
-            () => finalizzaRapportino(rap, null, null),
-            { timeout: 8000, enableHighAccuracy: true }
+            pos => { if (!gpsDone) { gpsDone = true; clearTimeout(gpsGuard); finalizzaRapportino(rap, pos.coords.latitude, pos.coords.longitude); } },
+            ()  => { if (!gpsDone) { gpsDone = true; clearTimeout(gpsGuard); finalizzaRapportino(rap, null, null); } },
+            { timeout: 8000, enableHighAccuracy: false }
         );
     } else {
         finalizzaRapportino(rap, null, null);
