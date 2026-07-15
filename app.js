@@ -1541,10 +1541,6 @@ function chiudiRapportino() {
         return;
     }
     const docs = loadDocViaggio(currentDriver.targa);
-    if (!docs.cmr && !docs.bolla) {
-        showToast('Documento mancante', 'Carica almeno CMR o Bolla di consegna prima di chiudere', 'error');
-        return;
-    }
     if (!confirm('Chiudere il rapportino di oggi? Il GPS rileverà la tua posizione per la sosta notturna.')) return;
 
     // Mostra spinner nel bottone
