@@ -1165,56 +1165,44 @@ function renderCalendarioRapportino(targa) {
     const el = document.getElementById('rapCalendario');
     if (!el) return;
     const today = getToday();
-    const todayD = new Date();
-    const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-    const GIORNI_SHORT = ['Lu','Ma','Me','Gi','Ve','Sa','Do'];
+    const GIORNI_SHORT = ['Do','Lu','Ma','Me','Gi','Ve','Sa'];
+    const MESI_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    const DAYS = 90;
+    const selDate = selectedRapDate || today;
 
-    // Primo giorno del mese (lunedì = 0)
-    const primoGiorno = new Date(calAnno, calMese, 1);
-    const ultimoGiorno = new Date(calAnno, calMese + 1, 0);
-    let startDow = primoGiorno.getDay(); // 0=dom
-    startDow = startDow === 0 ? 6 : startDow - 1; // converti a lun=0
-
-    // Intestazione navigazione
-    let html = '<div class="calendar-nav">'
-        + '<button class="cal-btn" onclick="cambiaCalMese(-1)">&#8249;</button>'
-        + '<span class="cal-month">' + MESI[calMese] + ' ' + calAnno + '</span>'
-        + '<button class="cal-btn" onclick="cambiaCalMese(1)">&#8250;</button>'
-        + '</div>';
-
-    // Header giorni
-    html += '<div class="cal-grid" style="margin-bottom:4px;">';
-    GIORNI_SHORT.forEach(g => {
-        html += '<div style="text-align:center;font-size:0.65rem;font-weight:700;color:var(--text-dim);padding:2px 0;">' + g + '</div>';
-    });
-    html += '</div>';
-
-    // Griglia giorni
-    html += '<div class="cal-grid">';
-    for (let i = 0; i < startDow; i++) {
-        html += '<div></div>';
-    }
-    for (let day = 1; day <= ultimoGiorno.getDate(); day++) {
-        const date = calAnno + '-' + String(calMese + 1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
-        const isFuture = date > today;
+    let html = '';
+    for (let i = DAYS - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const date = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         const isToday = date === today;
-        const isSel = date === (selectedRapDate || today);
-        const hasRap = !isFuture && !!localStorage.getItem(rapKeyDate(targa, date));
+        const isSel = date === selDate;
+        const hasRap = !!localStorage.getItem(rapKeyDate(targa, date));
+        const showMonth = (d.getDate() === 1) || (i === DAYS - 1);
 
-        const bg = isSel ? 'var(--red)' : (isToday ? '#fff3f3' : 'transparent');
-        const col = isSel ? 'white' : (isFuture ? '#ccc' : 'var(--black)');
+        const bg = isSel ? 'var(--red)' : (isToday ? '#fff3f3' : 'var(--gray)');
+        const col = isSel ? 'white' : 'var(--black)';
         const border = isSel ? 'none' : (isToday ? '1.5px solid var(--red)' : '1.5px solid transparent');
         const dot = hasRap
-            ? '<div style="width:5px;height:5px;border-radius:50%;background:' + (isSel ? 'white' : '#2e7d32') + ';margin:2px auto 0;"></div>'
-            : '<div style="width:5px;height:5px;margin:2px auto 0;"></div>';
-        const click = isFuture ? '' : 'onclick="selezionaGiornoRap(\'' + date + '\')"';
-        html += '<div ' + click + ' style="text-align:center;padding:6px 2px 4px;border-radius:8px;cursor:' + (isFuture ? 'default' : 'pointer') + ';background:' + bg + ';border:' + border + ';transition:background 0.15s;">'
-            + '<div style="font-size:0.85rem;font-weight:700;color:' + col + ';line-height:1.2;">' + day + '</div>'
+            ? '<div style="width:6px;height:6px;border-radius:50%;background:' + (isSel ? 'white' : '#2e7d32') + ';margin:2px auto 0;"></div>'
+            : '<div style="width:6px;height:6px;margin:2px auto 0;"></div>';
+        const monthLabel = showMonth
+            ? '<div style="font-size:0.55rem;font-weight:800;color:' + (isSel ? 'rgba(255,255,255,0.8)' : 'var(--red)') + ';text-transform:uppercase;margin-bottom:1px;">' + MESI_SHORT[d.getMonth()] + '</div>'
+            : '<div style="height:10px;"></div>';
+
+        html += '<div id="calDay_' + date + '" onclick="selezionaGiornoRap(\'' + date + '\')" style="flex-shrink:0;width:46px;text-align:center;padding:6px 4px 5px;border-radius:10px;cursor:pointer;background:' + bg + ';border:' + border + ';transition:background 0.15s;margin-right:5px;">'
+            + monthLabel
+            + '<div style="font-size:0.6rem;font-weight:700;color:' + (isSel ? 'rgba(255,255,255,0.75)' : 'var(--text-dim)') + ';text-transform:uppercase;">' + GIORNI_SHORT[d.getDay()] + '</div>'
+            + '<div style="font-size:1.05rem;font-weight:800;color:' + col + ';line-height:1.2;">' + d.getDate() + '</div>'
             + dot
             + '</div>';
     }
-    html += '</div>';
     el.innerHTML = html;
+
+    requestAnimationFrame(() => {
+        const target = document.getElementById('calDay_' + selDate) || document.getElementById('calDay_' + today);
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    });
 }
 
 function selezionaGiornoRap(date) {
