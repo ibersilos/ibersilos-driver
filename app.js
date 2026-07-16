@@ -1125,29 +1125,79 @@ document.addEventListener('DOMContentLoaded', () => {
 function rapKey(targa) { return 'ibs_rap_' + targa; }
 function rapStoricoKey(targa) { return 'ibs_rap_storico_' + targa; }
 
+let selectedRapDate = '';
+
+function rapKeyDate(targa, date) {
+    return date === getToday() ? rapKey(targa) : 'ibs_rap_' + targa + '_' + date;
+}
+
 function getToday() {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
 function loadRapportino(targa) {
+    const date = selectedRapDate || getToday();
     try {
-        const data = JSON.parse(localStorage.getItem(rapKey(targa)));
-        if (data && data.data === getToday()) return data;
+        const data = JSON.parse(localStorage.getItem(rapKeyDate(targa, date)));
+        if (data && data.data === date) return data;
     } catch(e) {}
-    // Crea nuovo rapportino per oggi
-    const nuovo = { data: getToday(), targa, kmGiorno: 0, oreGuida: 0, rifornimenti: [], note: '', chiuso: false, sostaNotturna: null };
-    localStorage.setItem(rapKey(targa), JSON.stringify(nuovo));
+    const nuovo = { data: date, targa, kmGiorno: 0, oreGuida: 0, rifornimenti: [], note: '', chiuso: false, sostaNotturna: null };
+    localStorage.setItem(rapKeyDate(targa, date), JSON.stringify(nuovo));
     return nuovo;
 }
 
 function saveRapportino(rap) {
-    localStorage.setItem(rapKey(rap.targa), JSON.stringify(rap));
+    const date = rap.data || getToday();
+    localStorage.setItem(rapKeyDate(rap.targa, date), JSON.stringify(rap));
+}
+
+function renderCalendarioRapportino(targa) {
+    const el = document.getElementById('rapCalendario');
+    if (!el) return;
+    const today = getToday();
+    const giorni = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        giorni.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
+    }
+    const GIORNI_SHORT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+    el.innerHTML = giorni.map(date => {
+        const d = new Date(date + 'T12:00:00');
+        const isToday = date === today;
+        const isSel = date === (selectedRapDate || today);
+        const hasRap = !!localStorage.getItem(rapKeyDate(targa, date));
+        const dot = hasRap
+            ? '<div style="width:6px;height:6px;border-radius:50%;background:' + (isSel ? 'white' : '#2e7d32') + ';margin:3px auto 0;"></div>'
+            : '<div style="width:6px;height:6px;border-radius:50%;background:transparent;margin:3px auto 0;"></div>';
+        const bg = isSel ? 'var(--red)' : (isToday ? '#fff3f3' : 'var(--gray)');
+        const col = isSel ? 'white' : 'var(--black)';
+        const border = isSel ? 'none' : (isToday ? '1.5px solid var(--red)' : '1.5px solid transparent');
+        return '<div onclick="selezionaGiornoRap(\'' + date + '\')" style="flex-shrink:0;width:44px;text-align:center;padding:8px 4px 6px;border-radius:10px;cursor:pointer;background:' + bg + ';border:' + border + ';transition:background 0.15s;">'
+            + '<div style="font-size:0.62rem;font-weight:700;color:' + (isSel ? 'rgba(255,255,255,0.8)' : 'var(--text-dim)') + ';text-transform:uppercase;">' + GIORNI_SHORT[d.getDay()] + '</div>'
+            + '<div style="font-size:1.1rem;font-weight:800;color:' + col + ';line-height:1.2;">' + d.getDate() + '</div>'
+            + dot
+            + '</div>';
+    }).join('');
+}
+
+function selezionaGiornoRap(date) {
+    selectedRapDate = date;
+    if (!currentDriver) return;
+    renderCalendarioRapportino(currentDriver.targa);
+    const rap = loadRapportino(currentDriver.targa);
+    const d = new Date(date + 'T12:00:00');
+    const dateStr = d.toLocaleDateString('it-IT', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    document.getElementById('rapDataOggi').textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+    renderRapportino(rap);
 }
 
 function initRapportino() {
     if (!currentDriver) return;
     const targa = currentDriver.targa;
+    selectedRapDate = getToday();
+    renderCalendarioRapportino(targa);
     const rap = loadRapportino(targa);
 
     // Header
@@ -1602,6 +1652,7 @@ async function finalizzaRapportino(rap, lat, lng) {
     storico.unshift(rap);
     localStorage.setItem(storicoKey, JSON.stringify(storico.slice(0, 90)));
 
+    renderCalendarioRapportino(currentDriver.targa);
     renderRapportino(rap);
     renderStoricoRapportini(currentDriver.targa);
 
