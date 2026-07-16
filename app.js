@@ -1593,6 +1593,12 @@ function chiudiSoloTrasferta() {
     rap.oreGuida = ore;
     rap.soloTrasferta = true;
 
+    const isToday = (selectedRapDate || getToday()) === getToday();
+    if (!isToday) {
+        apriSelettorePaese(rap);
+        return;
+    }
+
     const btn = document.getElementById('btnSoloTrasferta');
     btn.innerHTML = '<div style="width:16px;height:16px;border:2px solid rgba(0,0,0,0.2);border-top:2px solid var(--black);border-radius:50%;animation:spin 0.9s linear infinite;"></div> Rilevamento GPS...';
     btn.disabled = true;
@@ -1612,6 +1618,28 @@ function chiudiSoloTrasferta() {
     }
 }
 
+let _rapPendente = null; // usato dal selettore paese
+
+function apriSelettorePaese(rap) {
+    _rapPendente = rap;
+    const grid = document.getElementById('sostaPaeseGrid');
+    grid.innerHTML = Object.entries(PAESI_INFO).map(([cod, info]) =>
+        '<button onclick="confermaPaeseSosta(\'' + cod + '\')" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:10px;border:2px solid var(--border);background:white;cursor:pointer;font-size:0.75rem;font-weight:700;transition:border-color 0.15s;" onmouseover="this.style.borderColor=\'var(--red)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+            + '<span style="font-size:1.6rem;">' + info.flag + '</span>'
+            + '<span>' + info.nome + '</span>'
+            + '</button>'
+    ).join('');
+    document.getElementById('modalSostaPaese').style.display = 'flex';
+}
+
+function confermaPaeseSosta(codice) {
+    chiudiModal('modalSostaPaese');
+    const info = PAESI_INFO[codice];
+    const sostaNotturna = { paese: info.nome, codice, flag: info.flag, cap: '', citta: '' };
+    finalizzaRapportino(_rapPendente, null, null, sostaNotturna);
+    _rapPendente = null;
+}
+
 function chiudiRapportino() {
     const km = parseInt(document.getElementById('rapKmInput').value, 10) || 0;
     const ore = parseFloat(document.getElementById('rapOreGuida').value);
@@ -1620,17 +1648,24 @@ function chiudiRapportino() {
         return;
     }
     const docs = loadDocViaggio(currentDriver.targa);
-    if (!confirm('Chiudere il rapportino di oggi? Il GPS rileverà la tua posizione per la sosta notturna.')) return;
-
-    // Mostra spinner nel bottone
-    const btn = document.getElementById('btnChiudiRapportino');
-    btn.innerHTML = '<div style="width:18px;height:18px;border:3px solid rgba(0,0,0,0.2);border-top:3px solid var(--black);border-radius:50%;animation:spin 0.9s linear infinite;"></div> Rilevamento GPS...';
-    btn.disabled = true;
+    const isToday = (selectedRapDate || getToday()) === getToday();
+    if (!confirm('Chiudere il rapportino?' + (isToday ? ' Il GPS rileverà la tua posizione.' : ''))) return;
 
     const rap = loadRapportino(currentDriver.targa);
     rap.note = document.getElementById('rapNote').value;
     rap.kmGiorno = km;
     rap.oreGuida = ore;
+
+    // Giorno passato: selettore paese manuale
+    if (!isToday) {
+        apriSelettorePaese(rap);
+        return;
+    }
+
+    // Mostra spinner nel bottone
+    const btn = document.getElementById('btnChiudiRapportino');
+    btn.innerHTML = '<div style="width:18px;height:18px;border:3px solid rgba(0,0,0,0.2);border-top:3px solid var(--black);border-radius:50%;animation:spin 0.9s linear infinite;"></div> Rilevamento GPS...';
+    btn.disabled = true;
 
     if (navigator.geolocation) {
         let gpsDone = false;
@@ -1647,10 +1682,10 @@ function chiudiRapportino() {
     }
 }
 
-async function finalizzaRapportino(rap, lat, lng) {
-    let sostaNotturna = { paese: 'Sconosciuta', codice: '??', flag: '🏳️', cap: '', citta: '' };
+async function finalizzaRapportino(rap, lat, lng, sostaPreimpostata) {
+    let sostaNotturna = sostaPreimpostata || { paese: 'Sconosciuta', codice: '??', flag: '🏳️', cap: '', citta: '' };
 
-    if (lat !== null && lng !== null) {
+    if (!sostaPreimpostata && lat !== null && lng !== null) {
         try {
             // Nominatim OpenStreetMap - free, no API key
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=it`);
