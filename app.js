@@ -1552,6 +1552,7 @@ function chiudiRapportino() {
     btn.innerHTML = '<div style="width:18px;height:18px;border:3px solid rgba(0,0,0,0.2);border-top:3px solid var(--black);border-radius:50%;animation:spin 0.9s linear infinite;"></div> Rilevamento GPS...';
     btn.disabled = true;
 
+    const rap = loadRapportino(currentDriver.targa);
     rap.note = document.getElementById('rapNote').value;
     rap.kmGiorno = km;
     rap.oreGuida = ore;
