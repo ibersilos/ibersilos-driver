@@ -463,12 +463,36 @@ function initFirebase(targa) {
     if (fbUnsubscribers.length > 0) {
         return;
     }
-    const { db, ref, onValue } = window._fb;
+    const { db, ref, onValue, get } = window._fb;
 
-    // 1. Nodo viaggio proprio (stato fasi live)
-    const unsub1 = onValue(ref(db, fbPath(targa)), () => {
+    // 1. Nodo viaggio proprio (stato fasi live + trigger missione)
+    const unsub1 = onValue(ref(db, fbPath(targa)), (snap) => {
         fbConnected = true;
         updateSyncStatus(true, 'Connesso · Live');
+        // Se il dispatcher ha assegnato un missionId, forza rilettura missioni
+        const d = snap.val();
+        if (d && d.missionId) {
+            const mid = d.missionId;
+            if (!missioneCorrente || missioneCorrente.id !== mid) {
+                get(ref(db, 'dispatcher/missions')).then(function(s) {
+                    if (!s.exists()) return;
+                    const val = s.val();
+                    const lista2 = Array.isArray(val) ? val : Object.values(val);
+                    const mia2 = lista2.find(function(m) {
+                        return (m.targa === targa || m.autistaTarga === targa || m.plate === targa) &&
+                               m.status !== 'completed' && m.status !== 'cancelled';
+                    });
+                    if (mia2 && (!missioneCorrente || missioneCorrente.id !== mia2.id)) {
+                        missioneCorrente = mia2;
+                        aggiornaHeroMissione(mia2);
+                        showToast('📋 Nuova missione assegnata',
+                            mia2.id + ' · ' + estraiCitta(mia2.from) + ' → ' + estraiCitta(mia2.to),
+                            'success');
+                        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                    }
+                }).catch(function(e) { console.warn('[Firebase] lettura missione fallita:', e.message); });
+            }
+        }
     }, () => {
         fbConnected = false;
         updateSyncStatus(false, 'Connessione persa');
@@ -512,6 +536,9 @@ function initFirebase(targa) {
             m.status === 'completed'
         ).sort((a, b) => (b.completedAt || '') > (a.completedAt || '') ? 1 : -1);
         renderMissioniTerminate(terminate);
+    }, function(err) {
+        console.error('[Firebase] dispatcher/missions accesso negato:', err.message);
+        updateSyncStatus(false, 'Errore lettura missioni: ' + err.message);
     });
     fbUnsubscribers.push(unsub2);
 
