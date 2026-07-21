@@ -1966,6 +1966,7 @@ let gpsLastLng     = null;
 let gpsLastAcc     = null;
 let gpsLastUpdate  = null;
 let gpsKeepAliveId = null;   // setInterval per keepalive background
+let wakeLock       = null;   // Screen Wake Lock (Android WebView)
 
 const GPS_INTERVAL_MS  = 20000;  // invia ogni 20s
 const GPS_MAX_AGE_MS   = 15000;  // accetta posizione vecchia max 15s
@@ -2105,12 +2106,28 @@ async function avviaGPSTracking() {
         }
     }, 25000);
 
+    // Wake Lock: impedisce allo schermo di spegnersi su Android (HTTPS required)
+    if ('wakeLock' in navigator) {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+        } catch(e) {
+            // non supportato o permesso negato — GPS continua comunque
+        }
+    }
+
     // Page Visibility: riattiva watchPosition se il browser lo aveva sospeso
-    document.addEventListener('visibilitychange', () => {
+    document.addEventListener('visibilitychange', async () => {
         if (document.visibilityState === 'visible' && currentDriver && gpsWatchId === null) {
             avviaGPSTracking();
         }
-        if (document.visibilityState === 'visible') aggiornaUIGPS('ok');
+        if (document.visibilityState === 'visible') {
+            aggiornaUIGPS('ok');
+            // Il Wake Lock viene rilasciato automaticamente quando la pagina va in background;
+            // lo riacquistiamo quando torna visibile
+            if ('wakeLock' in navigator && wakeLock === null) {
+                try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {}
+            }
+        }
     });
 }
 
@@ -2129,6 +2146,10 @@ async function fermaGPSTracking() {
     if (gpsKeepAliveId !== null) {
         clearInterval(gpsKeepAliveId);
         gpsKeepAliveId = null;
+    }
+    if (wakeLock !== null) {
+        try { await wakeLock.release(); } catch(e) {}
+        wakeLock = null;
     }
 }
 
