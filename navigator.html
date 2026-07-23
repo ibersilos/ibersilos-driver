@@ -568,7 +568,7 @@ function selectRoute(mode) {
 }
 
 function updateBtnStart() {
-    document.getElementById('btnStart').disabled = !(_dest && _selectedMode && _routes[_selectedMode]);
+    document.getElementById('btnStart').disabled = !(_dest && _origin && _selectedMode && _routes[_selectedMode]);
 }
 
 // ── INIZIA NAVIGAZIONE ────────────────────────────────────────
@@ -587,42 +587,50 @@ function iniziaNavigazione() {
     // Label modalità
     document.getElementById('navModalitaLabel').textContent = _modalitaLabels[_selectedMode] || '';
 
-    // Init mappa Leaflet
-    if (!_navMap) {
-        _navMap = L.map('navMap', { zoomControl: true, attributionControl: false });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 20, attribution: '© OSM'
-        }).addTo(_navMap);
-    }
-
-    // Disegna rotta
-    if (_routeLayer) _navMap.removeLayer(_routeLayer);
-    const colMap = { veloce:'#3498db', breve:'#27ae60', economica:'#f39c12' };
-    _routeLayer = L.polyline(_polyCoords, {
-        color: colMap[_selectedMode] || '#E30613',
-        weight: 6, opacity: 0.85
-    }).addTo(_navMap);
-    _navMap.fitBounds(_routeLayer.getBounds(), { padding: [40, 40] });
-
-    // Marker truck
-    if (!_truckMarker) {
-        const icon = L.divIcon({
-            html: '<div class="truck-icon-wrap">🚛</div>',
-            className: '', iconSize: [32, 32], iconAnchor: [16, 16]
-        });
-        _truckMarker = L.marker([_origin.lat, _origin.lng], { icon }).addTo(_navMap);
-    } else {
-        _truckMarker.setLatLng([_origin.lat, _origin.lng]);
-    }
-
     // Aggiorna banner con prima maneuver
     aggiornaManeuverBanner();
 
-    // Avvia GPS
+    // Avvia GPS ad alta precisione
     if (_watchId) navigator.geolocation.clearWatch(_watchId);
     _watchId = navigator.geolocation.watchPosition(onGPS, null, {
         enableHighAccuracy: true, maximumAge: 3000, timeout: 10000
     });
+
+    // Init mappa Leaflet — dopo un frame per assicurare dimensioni container
+    setTimeout(() => {
+        if (!_navMap) {
+            _navMap = L.map('navMap', { zoomControl: true, attributionControl: false });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 20, attribution: '© OSM'
+            }).addTo(_navMap);
+        } else {
+            _navMap.invalidateSize();
+        }
+
+        // Disegna rotta
+        if (_routeLayer) _navMap.removeLayer(_routeLayer);
+        const colMap = { veloce:'#3498db', breve:'#27ae60', economica:'#f39c12' };
+        if (_polyCoords.length > 0) {
+            _routeLayer = L.polyline(_polyCoords, {
+                color: colMap[_selectedMode] || '#E30613',
+                weight: 6, opacity: 0.85
+            }).addTo(_navMap);
+            _navMap.fitBounds(_routeLayer.getBounds(), { padding: [40, 40] });
+        } else if (_origin) {
+            _navMap.setView([_origin.lat, _origin.lng], 13);
+        }
+
+        // Marker truck
+        const icon = L.divIcon({
+            html: '<div class="truck-icon-wrap">🚛</div>',
+            className: '', iconSize: [32, 32], iconAnchor: [16, 16]
+        });
+        if (!_truckMarker) {
+            _truckMarker = L.marker([_origin.lat, _origin.lng], { icon }).addTo(_navMap);
+        } else {
+            _truckMarker.setLatLng([_origin.lat, _origin.lng]);
+        }
+    }, 50);
 
     // Ricalcolo automatico ogni 20 min
     if (_rerouteTimer) clearInterval(_rerouteTimer);
@@ -634,6 +642,12 @@ function onGPS(pos) {
     const { latitude: lat, longitude: lng, speed } = pos.coords;
     _lastPos = { lat, lng };
     _origin  = { lat, lng };
+
+    // Prima fix GPS dopo destinazione pronta ma senza rotte ancora → calcola ora
+    if (_dest && Object.keys(_routes).length === 0) { calc3Routes(); return; }
+
+    // Se la navigazione non è ancora iniziata, usciamo qui
+    if (!_truckMarker || !_navMap) return;
 
     // Aggiorna marker
     _truckMarker.setLatLng([lat, lng]);
@@ -648,7 +662,6 @@ function onGPS(pos) {
         document.getElementById('distRemain').textContent = distRem > 1
             ? distRem.toFixed(1) + ' km al traguardo'
             : Math.round(distRem * 1000) + ' m al traguardo';
-        // ETA semplice: distanza / velocità media 70 km/h (o GPS speed)
         const avgKmh = (kmh && kmh > 5) ? kmh : 70;
         const etaMins = Math.round((distRem / avgKmh) * 60);
         const etaDate = new Date(Date.now() + etaMins * 60000);
@@ -657,15 +670,12 @@ function onGPS(pos) {
     }
 
     // Arrivati?
-    if (haversine(lat, lng, _dest.lat, _dest.lng) < 0.05) {
+    if (_dest && haversine(lat, lng, _dest.lat, _dest.lng) < 0.05) {
         arrivoDestinazione();
         return;
     }
 
-    // Trova maneuver corrente
     aggiornaManeuverCorrente(lat, lng);
-
-    // Centra mappa sul camion
     _navMap.panTo([lat, lng], { animate: true, duration: 0.5 });
 }
 
