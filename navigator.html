@@ -267,28 +267,34 @@ function decodeFlexPoly(enc) {
 // ── INIT ─────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
     showSpinner('Avvio navigator...');
-    await initGPSOrigin();
     if (_paramModalita) _selectedMode = _paramModalita;
+
+    // GPS: avvia subito watchPosition — non blocca il caricamento
+    avviaGPS();
 
     if (_paramDst) {
         await loadFromParams();
     } else if (_missionId) {
         await loadMission(_missionId);
     } else {
-        // Nessuna missione — input manuale
         document.getElementById('dstCard').style.display = '';
     }
     hideSpinner();
 });
 
-async function initGPSOrigin() {
-    return new Promise(res => {
-        if (!navigator.geolocation) { res(); return; }
-        navigator.geolocation.getCurrentPosition(pos => {
-            _origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            res();
-        }, () => res(), { timeout: 5000, maximumAge: 30000 });
-    });
+function avviaGPS() {
+    if (!navigator.geolocation) return;
+    // Prima fix rapida (rete/WiFi, accetta cache fino a 10 min)
+    navigator.geolocation.getCurrentPosition(pos => {
+        const prima = !_origin;
+        _origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        // Se la destinazione è già pronta e non abbiamo ancora calcolato → avvia ora
+        if (prima && _dest && Object.keys(_routes).length === 0) calc3Routes();
+    }, () => {}, { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 });
+
+    // watchPosition ad alta precisione per la navigazione
+    _watchId = navigator.geolocation.watchPosition(onGPS,
+        () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
 }
 
 function _showMissionCard(src, dst, meta) {
@@ -437,7 +443,6 @@ function buildRouteURL(extra) {
         `vehicle[width]=${TRUCK.width}`,
         `vehicle[axleCount]=${TRUCK.axleCount}`,
         `vehicle[trailerCount]=${TRUCK.trailerCount}`,
-        `vehicle[type]=${TRUCK.type}`,
         ...extra,
     ];
     return HERE_ROUTE + '?' + qs.join('&');
@@ -445,7 +450,11 @@ function buildRouteURL(extra) {
 
 async function calc3Routes() {
     if (!_dest) return;
-    if (!_origin) { showToast('GPS non ancora disponibile — riprova tra qualche secondo'); return; }
+    if (!_origin) {
+        document.getElementById('routeCards').innerHTML =
+            '<div class="route-loading" style="grid-column:1/-1">⌛ Acquisizione GPS in corso...</div>';
+        return;
+    }
     showSpinner('Calcolo 3 percorsi truck...');
     try {
         const [rV, rB, rE] = await Promise.allSettled([
@@ -752,7 +761,6 @@ async function forzaRicalcolo() {
             `vehicle[width]=${TRUCK.width}`,
             `vehicle[axleCount]=${TRUCK.axleCount}`,
             `vehicle[trailerCount]=${TRUCK.trailerCount}`,
-        `vehicle[type]=${TRUCK.type}`,
             _selectedMode === 'economica' ? 'avoid[features]=tollRoad' : '',
             _selectedMode === 'breve' ? 'routingMode=short' : 'routingMode=fast',
         ].filter(Boolean);
