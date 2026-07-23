@@ -243,23 +243,27 @@ const _paramDstLabel = _params.get('dstLabel') || '';
 const _paramModalita = _params.get('modalita') || '';
 const _paramSrc      = _params.get('src')      || '';  // "lat,lng" — posizione iniziale da app
 
-// ── FLEXIBLE POLYLINE DECODER (HERE v8) ─────────────────────
-const _FP_DT = [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,-1,52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,-1,-1,-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,63,-1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51];
+// ── FLEXIBLE POLYLINE DECODER (HERE Flexible Polyline v1) ───
+// Formato: vals[0]=versione, vals[1]=precision|(3rdDimType<<4), vals[2+]=coordinate delta
 function decodeFlexPoly(enc) {
-    const uints = []; let r = 0, sh = 0;
-    for (let i = 0; i < enc.length; i++) {
-        const v = _FP_DT[enc.charCodeAt(i)];
+    const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    const vals = []; let r = 0, sh = 0;
+    for (const ch of enc) {
+        const v = CHARS.indexOf(ch);
         if (v < 0) continue;
         r |= (v & 0x1F) << sh;
-        if ((v & 0x20) === 0) { uints.push(r); r = 0; sh = 0; } else sh += 5;
+        if ((v & 0x20) === 0) { vals.push(r); r = 0; sh = 0; } else sh += 5;
     }
-    const toSigned = u => (u & 1) ? ~(u >> 1) : (u >> 1);
-    const hdr = uints[0], prec = hdr & 0xF, dim3 = (hdr >> 4) & 0x7;
-    const factor = Math.pow(10, prec);
-    const coords = []; let lat = 0, lng = 0, i = 1;
-    while (i < uints.length) {
-        lat += toSigned(uints[i++]); lng += toSigned(uints[i++]);
-        if (dim3) i++;
+    const hdrB    = vals[1] ?? 0;
+    const prec    = hdrB & 0xF;
+    const dim3    = (hdrB >> 4) & 0x7;
+    const factor  = Math.pow(10, prec);
+    const step    = dim3 ? 3 : 2;
+    const toSig   = u => (u & 1) ? ~(u >> 1) : (u >> 1);
+    const coords  = []; let lat = 0, lng = 0;
+    for (let i = 2; i + 1 < vals.length; i += step) {
+        lat += toSig(vals[i]);
+        lng += toSig(vals[i + 1]);
         coords.push([lat / factor, lng / factor]);
     }
     return coords;
