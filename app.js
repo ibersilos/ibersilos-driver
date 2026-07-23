@@ -1967,6 +1967,7 @@ let gpsLastAcc     = null;
 let gpsLastUpdate  = null;
 let gpsKeepAliveId = null;   // setInterval per keepalive background
 let wakeLock       = null;   // Screen Wake Lock (Android WebView)
+let audioCtxBg     = null;   // AudioContext silent loop — impedisce sospensione tab Android
 
 const GPS_INTERVAL_MS  = 20000;  // invia ogni 20s
 const GPS_MAX_AGE_MS   = 15000;  // accetta posizione vecchia max 15s
@@ -2023,10 +2024,37 @@ function aggiornaUIGPS(stato) {
     }
 }
 
+function avviaAudioKeepAlive() {
+    if (audioCtxBg) return;
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const src = ctx.createBufferSource();
+        // Buffer di 1 secondo di silenzio in loop
+        src.buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+        src.loop = true;
+        const gain = ctx.createGain();
+        gain.gain.value = 0.001; // quasi silenzio ma non zero — Android lo tratta come media attiva
+        src.connect(gain);
+        gain.connect(ctx.destination);
+        src.start(0);
+        audioCtxBg = { ctx, src };
+    } catch(e) {}
+}
+
+function fermaAudioKeepAlive() {
+    if (!audioCtxBg) return;
+    try { audioCtxBg.src.stop(); } catch(e) {}
+    try { audioCtxBg.ctx.close(); } catch(e) {}
+    audioCtxBg = null;
+}
+
 async function avviaGPSTracking() {
     if (!currentDriver) return;
     fermaGPSTracking();
     aggiornaUIGPS('searching');
+    avviaAudioKeepAlive();
 
     // ── MODALITÀ 1: Plugin nativo Capacitor (APK) ──
     // Il Foreground Service Android mantiene il GPS attivo anche
@@ -2122,10 +2150,12 @@ async function avviaGPSTracking() {
         }
         if (document.visibilityState === 'visible') {
             aggiornaUIGPS('ok');
-            // Il Wake Lock viene rilasciato automaticamente quando la pagina va in background;
-            // lo riacquistiamo quando torna visibile
             if ('wakeLock' in navigator && wakeLock === null) {
                 try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {}
+            }
+            // AudioContext viene sospeso automaticamente in background — riprendilo
+            if (audioCtxBg && audioCtxBg.ctx.state === 'suspended') {
+                try { await audioCtxBg.ctx.resume(); } catch(e) {}
             }
         }
     });
@@ -2151,6 +2181,7 @@ async function fermaGPSTracking() {
         try { await wakeLock.release(); } catch(e) {}
         wakeLock = null;
     }
+    fermaAudioKeepAlive();
 }
 
 // Haversine: distanza in metri tra due coordinate
