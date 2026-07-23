@@ -6,8 +6,11 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1A1A1A">
+<meta name="theme-color" content="#E30613">
 <title>Ibersilos Navigator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -16,54 +19,60 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:'DM Sans','Segoe UI',sans-serif;-webkit-tap-highlight-color:transparent}
 :root{--red:#E30613;--dark-red:#B8050F;--yellow:#FFD100;--black:#1A1A1A;--gray:#F5F5F5;--border:#E0E0E0;--green:#28a745;--dim:#666}
-html,body{height:100%;overflow:hidden;background:#1A1A1A}
+html,body{height:100%;overflow:hidden;background:var(--gray)}
 
 /* ── SCREEN SETUP ── */
 #screenSetup{position:fixed;inset:0;background:var(--gray);display:flex;flex-direction:column;overflow-y:auto;z-index:10}
-.setup-header{background:#1A1A1A;padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:3px solid var(--red)}
-.setup-header img{height:32px;border-radius:4px}
-.setup-header-title{color:white;font-size:1rem;font-weight:700}
-.setup-header-sub{color:#aaa;font-size:0.72rem}
-.setup-body{padding:14px;display:flex;flex-direction:column;gap:12px;flex:1}
 
-.mission-card{background:white;border-radius:12px;padding:14px;border-left:4px solid var(--red);box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.mission-card-title{font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
-.mission-route{font-size:0.95rem;font-weight:700;color:var(--black);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.mission-arrow{color:#ccc}
-.mission-meta{font-size:0.75rem;color:var(--dim);margin-top:4px}
+/* Header — stesso stile app driver */
+.setup-header{background:#fff;border-top:4px solid var(--yellow);border-bottom:4px solid var(--red);padding:14px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.setup-header img{height:36px;border-radius:6px}
+.setup-header-title{font-size:1.05rem;font-weight:800;color:var(--black)}
+.setup-header-sub{font-size:0.72rem;color:var(--dim);font-weight:500;margin-top:1px}
 
-.dst-card{background:white;border-radius:12px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.dst-card label{font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:6px}
-.dst-input{width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;outline:none;transition:border-color .2s}
-.dst-input:focus{border-color:var(--red)}
-.dst-suggestions{background:white;border:1px solid var(--border);border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;display:none;margin-top:-2px}
-.dst-sugg-item{padding:10px 12px;font-size:0.82rem;cursor:pointer;border-bottom:1px solid var(--border)}
-.dst-sugg-item:hover{background:#fff5f5}
+/* Contenitore centrato (max 480px) come app driver */
+.setup-body{padding:16px;display:flex;flex-direction:column;gap:12px;flex:1;max-width:480px;margin:0 auto;width:100%}
 
+/* Card missione — stile .card del driver */
+.mission-card{background:white;border-radius:12px;padding:16px 18px;border-left:4px solid var(--red);box-shadow:0 2px 10px rgba(0,0,0,.07)}
+.mission-card-title{font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);margin-bottom:8px}
+.mission-route{font-size:1rem;font-weight:700;color:var(--black);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mission-arrow{color:var(--yellow);font-size:1.1rem}
+.mission-meta{font-size:0.75rem;color:var(--dim);margin-top:4px;font-weight:500}
+
+/* Card destinazione manuale */
+.dst-card{background:white;border-radius:12px;padding:16px 18px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
+.dst-card label{font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:8px}
+.dst-input{width:100%;padding:13px 14px;border:2px solid var(--border);border-radius:10px;font-size:0.95rem;outline:none;transition:border-color .2s;background:#fafafa}
+.dst-input:focus{border-color:var(--red);background:#fff;box-shadow:0 0 0 4px rgba(227,6,19,.06)}
+.dst-suggestions{background:white;border:1px solid var(--border);border-radius:0 0 10px 10px;max-height:160px;overflow-y:auto;display:none;margin-top:-2px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.dst-sugg-item{padding:11px 14px;font-size:0.85rem;cursor:pointer;border-bottom:1px solid var(--border);color:var(--black)}
+.dst-sugg-item:hover{background:#fff5f5;color:var(--red)}
+
+/* 3 Itinerari */
 .route-label{font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim)}
 .route-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.route-card{background:white;border:2px solid var(--border);border-radius:10px;padding:10px 7px;cursor:pointer;transition:all .15s;text-align:center}
-.route-card:hover{border-color:#aaa}
-.route-card.selected{border-color:var(--red);background:#fff5f5}
-.route-card.unavail{opacity:.45;pointer-events:none}
-.route-card-icon{font-size:1.3rem;margin-bottom:4px}
-.route-card-name{font-size:0.72rem;font-weight:800;color:var(--black)}
-.route-card-km{font-size:1rem;font-weight:800;color:var(--black);margin-top:4px}
-.route-card-time{font-size:0.7rem;color:var(--dim)}
-.route-card-toll{font-size:0.72rem;font-weight:700;margin-top:3px}
+.route-card{background:white;border:2px solid var(--border);border-radius:12px;padding:12px 7px;cursor:pointer;transition:all .15s;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.route-card:active{transform:scale(.97)}
+.route-card.selected{border-color:var(--red);background:#fff5f5;box-shadow:0 2px 12px rgba(227,6,19,.15)}
+.route-card.unavail{opacity:.4;pointer-events:none}
+.route-card-icon{font-size:1.4rem;margin-bottom:5px}
+.route-card-name{font-size:0.72rem;font-weight:800;color:var(--black);text-transform:uppercase;letter-spacing:.5px}
+.route-card-km{font-size:1.05rem;font-weight:800;color:var(--black);margin-top:5px}
+.route-card-time{font-size:0.72rem;color:var(--dim);margin-top:1px}
+.route-card-toll{font-size:0.72rem;font-weight:700;margin-top:4px}
 .toll-zero{color:var(--green)}
 .toll-cost{color:var(--red)}
-.route-card-saving{font-size:0.6rem;background:#e8f5e9;color:var(--green);font-weight:700;padding:2px 5px;border-radius:4px;margin-top:3px;display:inline-block}
+.route-card-saving{font-size:0.6rem;background:#e8f5e9;color:var(--green);font-weight:700;padding:2px 6px;border-radius:4px;margin-top:4px;display:inline-block}
 .route-card-warn{font-size:0.6rem;color:#e65100;margin-top:2px}
-.route-loading{text-align:center;padding:20px;color:var(--dim);font-size:0.85rem}
+.route-loading{text-align:center;padding:24px;color:var(--dim);font-size:0.85rem;grid-column:1/-1}
 
-.ch-notice{background:#fff8e1;border:1px solid var(--yellow);border-radius:8px;padding:10px 12px;font-size:0.75rem;color:#7a5f00;display:flex;align-items:center;gap:8px}
-.ch-notice svg{flex-shrink:0;width:16px;height:16px}
-
-.btn-start{width:100%;padding:15px;background:var(--red);color:white;border:none;border-radius:12px;font-size:1rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background .15s;margin-top:4px}
-.btn-start:hover{background:var(--dark-red)}
-.btn-start:disabled{background:#ccc;cursor:not-allowed}
-.btn-back{background:white;border:2px solid var(--border);color:var(--dim);padding:11px;border-radius:10px;font-size:0.8rem;font-weight:700;cursor:pointer;text-align:center}
+/* Bottone principale — stesso .btn-primary del driver */
+.btn-start{width:100%;padding:17px;background:var(--red);color:white;border:none;border-radius:10px;font-size:1rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 14px rgba(227,6,19,.3);transition:all .2s}
+.btn-start:active{transform:scale(.97);box-shadow:0 2px 6px rgba(227,6,19,.2)}
+.btn-start:disabled{background:#ccc;cursor:not-allowed;box-shadow:none}
+.btn-back{background:white;border:2px solid var(--border);color:var(--dim);padding:13px;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;text-align:center;transition:border-color .2s}
+.btn-back:hover{border-color:#aaa}
 
 /* ── SCREEN NAV ── */
 #screenNav{position:fixed;inset:0;display:none;flex-direction:column;z-index:10}
@@ -120,7 +129,7 @@ html,body{height:100%;overflow:hidden;background:#1A1A1A}
     <img src="logo.jpg" alt="Ibersilos" onerror="this.style.display='none'">
     <div>
       <div class="setup-header-title">Ibersilos Navigator</div>
-      <div class="setup-header-sub">Navigatore truck · Svizzera sempre esclusa</div>
+      <div class="setup-header-sub">Navigatore Truck</div>
     </div>
   </div>
   <div class="setup-body">
@@ -137,12 +146,6 @@ html,body{height:100%;overflow:hidden;background:#1A1A1A}
       <label>Destinazione</label>
       <input type="text" id="dstInput" class="dst-input" placeholder="Cerca indirizzo o città..." autocomplete="off" oninput="onDstInput()">
       <div id="dstSuggestions" class="dst-suggestions"></div>
-    </div>
-
-    <!-- Avviso Svizzera -->
-    <div class="ch-notice">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      La Svizzera è sempre esclusa dal percorso. Il router usa automaticamente il corridoio via Francia o Austria.
     </div>
 
     <!-- 3 Itinerari -->
