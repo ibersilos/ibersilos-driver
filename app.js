@@ -2249,12 +2249,9 @@ function apriNavigatorIbersilos() {
     if (missioneCorrente) {
         var m = missioneCorrente;
         if (m.id) params.set('missionId', m.id);
-        // Etichetta leggibile: preferisce toNome (es. "Torino") a to (indirizzo completo)
-        var dstLabel = (m.toNome && m.toNome !== '—') ? m.toNome : '';
-        // Stringa per geocoding: prima toNome se abbastanza lunga, poi to
-        var dst = '';
-        if (m.toNome && m.toNome !== '—' && m.toNome.length > 2) dst = m.toNome;
-        else if (m.to   && m.to   !== '—') dst = m.to;
+        // dst = indirizzo completo per geocoding HERE; dstLabel = nome leggibile per display
+        var dst      = (m.to     && m.to     !== '—') ? m.to     : '';
+        var dstLabel = (m.toNome && m.toNome !== '—') ? m.toNome : dst;
         if (dst) {
             params.set('dst', dst);
             if (dstLabel && dstLabel !== dst) params.set('dstLabel', dstLabel);

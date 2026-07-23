@@ -139,13 +139,19 @@ html,body{height:100%;overflow:hidden;background:var(--gray)}
       <div class="mission-card-title">Missione corrente</div>
       <div class="mission-route" id="missionRoute">—</div>
       <div class="mission-meta" id="missionMeta"></div>
+      <!-- Sezione conferma destinazione: appare solo se geocoding fallisce -->
+      <div id="missionDstConfirm" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Conferma destinazione</div>
+        <input type="text" id="dstInput" class="dst-input" placeholder="Cerca indirizzo o città..." autocomplete="off" oninput="onDstInput()">
+        <div id="dstSuggestions" class="dst-suggestions"></div>
+      </div>
     </div>
 
-    <!-- Destinazione manuale (se no missione) -->
-    <div id="dstCard" class="dst-card">
+    <!-- Destinazione manuale — visibile SOLO senza missione -->
+    <div id="dstCard" style="display:none" class="dst-card">
       <label>Destinazione</label>
-      <input type="text" id="dstInput" class="dst-input" placeholder="Cerca indirizzo o città..." autocomplete="off" oninput="onDstInput()">
-      <div id="dstSuggestions" class="dst-suggestions"></div>
+      <input type="text" id="dstInputManuale" class="dst-input" placeholder="Cerca indirizzo o città..." autocomplete="off" oninput="onDstInputManuale()">
+      <div id="dstSuggestionsManuale" class="dst-suggestions"></div>
     </div>
 
     <!-- 3 Itinerari -->
@@ -268,11 +274,12 @@ window.addEventListener('load', async () => {
     if (_paramModalita) _selectedMode = _paramModalita;
 
     if (_paramDst) {
-        // Fast path: destinazione passata via URL dall'app
         await loadFromParams();
     } else if (_missionId) {
-        // Fallback: legge missione da Firebase
         await loadMission(_missionId);
+    } else {
+        // Nessuna missione — input manuale
+        document.getElementById('dstCard').style.display = '';
     }
     hideSpinner();
 });
@@ -287,60 +294,63 @@ async function initGPSOrigin() {
     });
 }
 
-async function loadFromParams() {
-    const label = _paramDstLabel || _paramDst;
-    const src   = _params.get('src') || 'Posizione corrente';
-
-    // Mostra subito la card missione con i dati disponibili
+function _showMissionCard(src, dst, meta) {
     document.getElementById('missionCard').style.display = '';
-    document.getElementById('missionRoute').innerHTML =
-        `<span>${src}</span><span class="mission-arrow">→</span><span>${label}</span>`;
-    document.getElementById('missionMeta').textContent =
-        [_missionId, _selectedMode ? _modalitaLabels[_selectedMode] : ''].filter(Boolean).join(' · ');
-
-    // Pre-compila l'input destinazione e nascondi la card manuale
-    document.getElementById('dstInput').value = label;
     document.getElementById('dstCard').style.display = 'none';
+    document.getElementById('missionRoute').innerHTML =
+        `<span>${src}</span><span class="mission-arrow">→</span><span>${dst}</span>`;
+    document.getElementById('missionMeta').textContent = meta;
+}
 
-    showSpinner('Geocodifica destinazione...');
-    const gc = await geocode(_paramDst);
+function _showDstConfirm(prefill) {
+    const el = document.getElementById('missionDstConfirm');
+    el.style.display = '';
+    document.getElementById('dstInput').value = prefill;
+}
+
+async function loadFromParams() {
+    const label = _paramDstLabel || _paramDst;   // nome display
+    const addr  = _paramDst;                      // indirizzo per geocoding (campo 'to' del DSP)
+    const src   = _params.get('src') || 'Posizione corrente';
+    const meta  = [_missionId, _selectedMode ? _modalitaLabels[_selectedMode] : ''].filter(Boolean).join(' · ');
+
+    _showMissionCard(src, label, meta);
+
+    showSpinner('Calcolo percorso...');
+    const gc = await geocode(addr);
     if (gc) {
         _dest = { ...gc, label };
         await calc3Routes();
     } else {
-        // Geocoding fallito: mostra l'input pre-compilato così il driver può rifinire
-        showToast('Premi "Cerca" per trovare la destinazione');
-        document.getElementById('dstCard').style.display = '';
+        // Geocoding fallito: mostra input inline nella card missione, pre-compilato
+        _showDstConfirm(label);
+        showToast('Conferma la destinazione e cerca');
     }
 }
 
 async function loadMission(id) {
     try {
-        // Missioni salvate nel nodo dispatcher/missions come array o mappa
         const snap = await _db.ref('dispatcher/missions').once('value');
         const data = snap.val();
-        if (!data) return;
+        if (!data) { document.getElementById('dstCard').style.display = ''; return; }
         const lista = Array.isArray(data) ? data : Object.values(data);
         const m = lista.find(x => x && x.id === id);
-        if (!m) return;
-        document.getElementById('missionCard').style.display = '';
-        document.getElementById('missionRoute').innerHTML =
-            `<span>${m.fromNome || m.from || '—'}</span><span class="mission-arrow">→</span><span>${m.toNome || m.to || '—'}</span>`;
-        document.getElementById('missionMeta').textContent =
-            [m.cargo, m.cliente, m.rottaModalita ? _modalitaLabels[m.rottaModalita] : ''].filter(Boolean).join(' · ');
-        document.getElementById('dstCard').style.display = 'none';
-        const dstAddr = m.to || m.toNome || '';
-        if (dstAddr && dstAddr !== '—') {
-            showSpinner('Geocodifica destinazione...');
-            const gc = await geocode(dstAddr);
-            if (gc) {
-                _dest = gc;
-                document.getElementById('dstInput').value = gc.label;
-                if (!_selectedMode) _selectedMode = m.rottaModalita || null;
-                await calc3Routes();
-            }
+        if (!m) { document.getElementById('dstCard').style.display = ''; return; }
+        const src  = m.fromNome || m.from || 'Partenza';
+        const dst  = m.toNome   || m.to   || '—';
+        const meta = [m.cargo, m.cliente, m.rottaModalita ? _modalitaLabels[m.rottaModalita] : ''].filter(Boolean).join(' · ');
+        _showMissionCard(src, dst, meta);
+        if (!_selectedMode) _selectedMode = m.rottaModalita || null;
+        const addr = (m.to && m.to !== '—') ? m.to : (m.toNome && m.toNome !== '—' ? m.toNome : '');
+        if (addr) {
+            showSpinner('Calcolo percorso...');
+            const gc = await geocode(addr);
+            if (gc) { _dest = gc; await calc3Routes(); }
+            else _showDstConfirm(dst);
+        } else {
+            _showDstConfirm('');
         }
-    } catch(e) { console.warn('loadMission:', e); }
+    } catch(e) { console.warn('loadMission:', e); document.getElementById('dstCard').style.display = ''; }
 }
 
 // ── GEOCODING ────────────────────────────────────────────────
@@ -354,10 +364,11 @@ async function geocode(query) {
     } catch(e) { return null; }
 }
 
+// Autocomplete generico
 let _acAbort = null;
-async function onDstInput() {
-    const q = document.getElementById('dstInput').value.trim();
-    const sugg = document.getElementById('dstSuggestions');
+function _autocomplete(inputId, suggId, onSelect) {
+    const q = document.getElementById(inputId).value.trim();
+    const sugg = document.getElementById(suggId);
     _dest = null; _routes = {}; renderRouteCards(); updateBtnStart();
     if (q.length < 3) { sugg.style.display = 'none'; return; }
     clearTimeout(_acTimer);
@@ -369,7 +380,7 @@ async function onDstInput() {
             const d = await r.json();
             const items = d.items || [];
             sugg.innerHTML = items.map((it, i) =>
-                `<div class="dst-sugg-item" onclick="selectSuggestion(${i})">${it.address?.label || it.title}</div>`
+                `<div class="dst-sugg-item" onclick="${onSelect}(${i})">${it.address?.label || it.title}</div>`
             ).join('');
             sugg.style.display = items.length ? '' : 'none';
             sugg._items = items;
@@ -377,14 +388,33 @@ async function onDstInput() {
     }, 350);
 }
 
+// Input inline nella missionCard (geocoding fallito con missione)
+function onDstInput() { _autocomplete('dstInput', 'dstSuggestions', 'selectSuggestion'); }
 async function selectSuggestion(i) {
-    const items = document.getElementById('dstSuggestions')._items || [];
-    const item = items[i];
-    if (!item) return;
-    document.getElementById('dstSuggestions').style.display = 'none';
-    document.getElementById('dstInput').value = item.address?.label || item.title;
+    const sugg = document.getElementById('dstSuggestions');
+    const item = (sugg._items || [])[i]; if (!item) return;
+    sugg.style.display = 'none';
+    const addr = item.address?.label || item.title;
+    document.getElementById('dstInput').value = addr;
     showSpinner('Geocodifica...');
-    const gc = await geocode(item.address?.label || item.title);
+    const gc = await geocode(addr);
+    hideSpinner();
+    if (!gc) { showToast('Indirizzo non trovato'); return; }
+    _dest = gc;
+    document.getElementById('missionDstConfirm').style.display = 'none';
+    await calc3Routes();
+}
+
+// Input manuale senza missione (dstCard standalone)
+function onDstInputManuale() { _autocomplete('dstInputManuale', 'dstSuggestionsManuale', 'selectSuggestionManuale'); }
+async function selectSuggestionManuale(i) {
+    const sugg = document.getElementById('dstSuggestionsManuale');
+    const item = (sugg._items || [])[i]; if (!item) return;
+    sugg.style.display = 'none';
+    const addr = item.address?.label || item.title;
+    document.getElementById('dstInputManuale').value = addr;
+    showSpinner('Geocodifica...');
+    const gc = await geocode(addr);
     hideSpinner();
     if (!gc) { showToast('Indirizzo non trovato'); return; }
     _dest = gc;
