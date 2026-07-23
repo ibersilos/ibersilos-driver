@@ -241,6 +241,7 @@ _missionId = _params.get('missionId') || '';
 const _paramDst      = _params.get('dst')      || '';
 const _paramDstLabel = _params.get('dstLabel') || '';
 const _paramModalita = _params.get('modalita') || '';
+const _paramSrc      = _params.get('src')      || '';  // "lat,lng" — posizione iniziale da app
 
 // ── FLEXIBLE POLYLINE DECODER (HERE v8) ─────────────────────
 const _FP_DT = [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,-1,52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,-1,-1,-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,63,-1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51];
@@ -268,6 +269,12 @@ function decodeFlexPoly(enc) {
 window.addEventListener('load', async () => {
     showSpinner('Avvio navigator...');
     if (_paramModalita) _selectedMode = _paramModalita;
+
+    // Posizione iniziale da URL param ?src=lat,lng (da app.js o test desktop)
+    if (_paramSrc) {
+        const [lat, lng] = _paramSrc.split(',').map(Number);
+        if (!isNaN(lat) && !isNaN(lng)) _origin = { lat, lng };
+    }
 
     // GPS: avvia subito watchPosition — non blocca il caricamento
     avviaGPS();
@@ -613,16 +620,14 @@ function iniziaNavigazione() {
         enableHighAccuracy: true, maximumAge: 3000, timeout: 10000
     });
 
-    // Init mappa Leaflet — dopo un frame per assicurare dimensioni container
+    // Init mappa Leaflet — distruggi sempre e ricrea per evitare tile duplicati
     setTimeout(() => {
-        if (!_navMap) {
-            _navMap = L.map('navMap', { zoomControl: true, attributionControl: false });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 20, attribution: '© OSM'
-            }).addTo(_navMap);
-        } else {
-            _navMap.invalidateSize();
-        }
+        if (_navMap) { _navMap.remove(); _navMap = null; _truckMarker = null; _routeLayer = null; }
+        _navMap = L.map('navMap', { zoomControl: true, attributionControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 20, attribution: '© OSM'
+        }).addTo(_navMap);
+        _navMap.invalidateSize();
 
         // Disegna rotta
         if (_routeLayer) _navMap.removeLayer(_routeLayer);
