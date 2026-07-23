@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1A1A1A">
+<title>Ibersilos Navigator</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'DM Sans','Segoe UI',sans-serif;-webkit-tap-highlight-color:transparent}
+:root{--red:#E30613;--dark-red:#B8050F;--yellow:#FFD100;--black:#1A1A1A;--gray:#F5F5F5;--border:#E0E0E0;--green:#28a745;--dim:#666}
+html,body{height:100%;overflow:hidden;background:#1A1A1A}
+
+/* ── SCREEN SETUP ── */
+#screenSetup{position:fixed;inset:0;background:var(--gray);display:flex;flex-direction:column;overflow-y:auto;z-index:10}
+.setup-header{background:#1A1A1A;padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:3px solid var(--red)}
+.setup-header img{height:32px;border-radius:4px}
+.setup-header-title{color:white;font-size:1rem;font-weight:700}
+.setup-header-sub{color:#aaa;font-size:0.72rem}
+.setup-body{padding:14px;display:flex;flex-direction:column;gap:12px;flex:1}
+
+.mission-card{background:white;border-radius:12px;padding:14px;border-left:4px solid var(--red);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.mission-card-title{font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.mission-route{font-size:0.95rem;font-weight:700;color:var(--black);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mission-arrow{color:#ccc}
+.mission-meta{font-size:0.75rem;color:var(--dim);margin-top:4px}
+
+.dst-card{background:white;border-radius:12px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.dst-card label{font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:6px}
+.dst-input{width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;outline:none;transition:border-color .2s}
+.dst-input:focus{border-color:var(--red)}
+.dst-suggestions{background:white;border:1px solid var(--border);border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;display:none;margin-top:-2px}
+.dst-sugg-item{padding:10px 12px;font-size:0.82rem;cursor:pointer;border-bottom:1px solid var(--border)}
+.dst-sugg-item:hover{background:#fff5f5}
+
+.route-label{font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim)}
+.route-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.route-card{background:white;border:2px solid var(--border);border-radius:10px;padding:10px 7px;cursor:pointer;transition:all .15s;text-align:center}
+.route-card:hover{border-color:#aaa}
+.route-card.selected{border-color:var(--red);background:#fff5f5}
+.route-card.unavail{opacity:.45;pointer-events:none}
+.route-card-icon{font-size:1.3rem;margin-bottom:4px}
+.route-card-name{font-size:0.72rem;font-weight:800;color:var(--black)}
+.route-card-km{font-size:1rem;font-weight:800;color:var(--black);margin-top:4px}
+.route-card-time{font-size:0.7rem;color:var(--dim)}
+.route-card-toll{font-size:0.72rem;font-weight:700;margin-top:3px}
+.toll-zero{color:var(--green)}
+.toll-cost{color:var(--red)}
+.route-card-saving{font-size:0.6rem;background:#e8f5e9;color:var(--green);font-weight:700;padding:2px 5px;border-radius:4px;margin-top:3px;display:inline-block}
+.route-card-warn{font-size:0.6rem;color:#e65100;margin-top:2px}
+.route-loading{text-align:center;padding:20px;color:var(--dim);font-size:0.85rem}
+
+.ch-notice{background:#fff8e1;border:1px solid var(--yellow);border-radius:8px;padding:10px 12px;font-size:0.75rem;color:#7a5f00;display:flex;align-items:center;gap:8px}
+.ch-notice svg{flex-shrink:0;width:16px;height:16px}
+
+.btn-start{width:100%;padding:15px;background:var(--red);color:white;border:none;border-radius:12px;font-size:1rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background .15s;margin-top:4px}
+.btn-start:hover{background:var(--dark-red)}
+.btn-start:disabled{background:#ccc;cursor:not-allowed}
+.btn-back{background:white;border:2px solid var(--border);color:var(--dim);padding:11px;border-radius:10px;font-size:0.8rem;font-weight:700;cursor:pointer;text-align:center}
+
+/* ── SCREEN NAV ── */
+#screenNav{position:fixed;inset:0;display:none;flex-direction:column;z-index:10}
+
+/* Maneuver banner */
+#maneuverBanner{background:#1A1A1A;color:white;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;z-index:500;min-height:72px}
+.maneuver-arrow{font-size:2rem;flex-shrink:0;min-width:40px;text-align:center}
+.maneuver-text{flex:1;min-width:0}
+.maneuver-instruction{font-size:0.95rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.maneuver-dist{font-size:0.72rem;color:#aaa;margin-top:2px}
+.maneuver-next{font-size:0.68rem;color:#777;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.maneuver-eta{text-align:right;flex-shrink:0}
+.maneuver-eta-time{font-size:1rem;font-weight:800;color:var(--yellow)}
+.maneuver-eta-label{font-size:0.6rem;color:#aaa;text-transform:uppercase;letter-spacing:.5px}
+
+/* Map */
+#navMap{flex:1;z-index:100}
+
+/* Footer bar */
+#navFooter{background:#1A1A1A;display:flex;align-items:center;padding:8px 12px;gap:8px;flex-shrink:0;z-index:500}
+.nav-speed{background:#2a2a2a;border-radius:8px;padding:8px 14px;text-align:center;min-width:64px}
+.nav-speed-val{font-size:1.4rem;font-weight:800;color:white;line-height:1}
+.nav-speed-unit{font-size:0.6rem;color:#aaa;text-transform:uppercase}
+.nav-info{flex:1;text-align:center}
+.nav-dist-remain{font-size:0.78rem;font-weight:700;color:white}
+.nav-modalita{font-size:0.62rem;color:#888;margin-top:1px}
+.nav-reroute-btn{background:#2a2a2a;border:none;color:#aaa;border-radius:8px;padding:8px 10px;font-size:0.7rem;font-weight:700;cursor:pointer}
+.nav-stop-btn{background:var(--red);border:none;color:white;border-radius:8px;padding:8px 14px;font-size:0.75rem;font-weight:700;cursor:pointer}
+
+/* Spinner overlay */
+#spinner{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:1000;flex-direction:column;gap:12px}
+#spinner.show{display:flex}
+.spinner-text{color:white;font-size:0.88rem;font-weight:600}
+.spinner-ring{width:44px;height:44px;border:4px solid rgba(255,255,255,.2);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Toast */
+#toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1A1A1A;color:white;padding:10px 18px;border-radius:20px;font-size:0.82rem;font-weight:600;z-index:2000;display:none;white-space:nowrap;border:1px solid var(--red)}
+#toast.show{display:block}
+
+/* Truck marker */
+.truck-icon-wrap{background:var(--red);border-radius:50%;border:2px solid white;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 8px rgba(227,6,19,.5)}
+</style>
+</head>
+<body>
+
+<!-- SPINNER -->
+<div id="spinner"><div class="spinner-ring"></div><div class="spinner-text" id="spinnerText">Caricamento...</div></div>
+<div id="toast"></div>
+
+<!-- SCREEN SETUP -->
+<div id="screenSetup">
+  <div class="setup-header">
+    <img src="logo.jpg" alt="Ibersilos" onerror="this.style.display='none'">
+    <div>
+      <div class="setup-header-title">Ibersilos Navigator</div>
+      <div class="setup-header-sub">Navigatore truck · Svizzera sempre esclusa</div>
+    </div>
+  </div>
+  <div class="setup-body">
+
+    <!-- Info missione -->
+    <div id="missionCard" style="display:none" class="mission-card">
+      <div class="mission-card-title">Missione corrente</div>
+      <div class="mission-route" id="missionRoute">—</div>
+      <div class="mission-meta" id="missionMeta"></div>
+    </div>
+
+    <!-- Destinazione manuale (se no missione) -->
+    <div id="dstCard" class="dst-card">
+      <label>Destinazione</label>
+      <input type="text" id="dstInput" class="dst-input" placeholder="Cerca indirizzo o città..." autocomplete="off" oninput="onDstInput()">
+      <div id="dstSuggestions" class="dst-suggestions"></div>
+    </div>
+
+    <!-- Avviso Svizzera -->
+    <div class="ch-notice">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      La Svizzera è sempre esclusa dal percorso. Il router usa automaticamente il corridoio via Francia o Austria.
+    </div>
+
+    <!-- 3 Itinerari -->
+    <div class="route-label">Scegli itinerario</div>
+    <div id="routeCards" class="route-cards">
+      <div class="route-loading" style="grid-column:1/-1">Inserisci destinazione per calcolare i percorsi</div>
+    </div>
+
+    <button class="btn-start" id="btnStart" onclick="iniziaNavigazione()" disabled>INIZIA NAVIGAZIONE</button>
+    <button class="btn-back" onclick="history.back()">← Torna all'app</button>
+  </div>
+</div>
+
+<!-- SCREEN NAVIGAZIONE -->
+<div id="screenNav">
+  <div id="maneuverBanner">
+    <div class="maneuver-arrow" id="maneuverArrow">↑</div>
+    <div class="maneuver-text">
+      <div class="maneuver-instruction" id="maneuverInstruction">Attendere GPS...</div>
+      <div class="maneuver-dist" id="maneuverDist"></div>
+      <div class="maneuver-next" id="maneuverNext"></div>
+    </div>
+    <div class="maneuver-eta">
+      <div class="maneuver-eta-time" id="etaTime">—</div>
+      <div class="maneuver-eta-label">arrivo</div>
+    </div>
+  </div>
+  <div id="navMap"></div>
+  <div id="navFooter">
+    <div class="nav-speed">
+      <div class="nav-speed-val" id="speedVal">0</div>
+      <div class="nav-speed-unit">km/h</div>
+    </div>
+    <div class="nav-info">
+      <div class="nav-dist-remain" id="distRemain">—</div>
+      <div class="nav-modalita" id="navModalitaLabel"></div>
+    </div>
+    <button class="nav-reroute-btn" onclick="forzaRicalcolo()">↺ Ricalcola</button>
+    <button class="nav-stop-btn" onclick="stopNavigazione()">■ Stop</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ───────────────────────────────────────────────────
+const FB_CONFIG = {
+    apiKey:"AIzaSyDbLEYKeJw0667KPnMKLnwdALK_UB71XtM",
+    authDomain:"ibersilos-c6053.firebaseapp.com",
+    databaseURL:"https://ibersilos-c6053-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId:"ibersilos-c6053"
+};
+firebase.initializeApp(FB_CONFIG);
+const _db = firebase.database();
+firebase.auth().signInAnonymously().catch(()=>{});
+
+// HERE API key — stessa del DSP/DRV
+const HERE_KEY = localStorage.getItem('ibs_here_key') || 'KUr3OHzgQtbqSNEV_WDhUbm8YfBGMqPOmm5-_cFIv6E';
+const HERE_GEO  = 'https://geocode.search.hereapi.com/v1/geocode';
+const HERE_AUTO = 'https://autocomplete.search.hereapi.com/v1/autocomplete';
+const HERE_ROUTE= 'https://router.hereapi.com/v8/routes';
+const AVOID_CH  = 'avoid[areas]=bbox:5.956,45.818,10.492,47.808';
+
+// Profilo veicolo (stesso del DSP)
+const TRUCK = { grossWeight:40000, weightPerAxle:12000, height:380, length:1650, width:255, axleCount:5, trailerCount:1 };
+
+// ── STATE ────────────────────────────────────────────────────
+let _dest = null;          // {lat, lng, label}
+let _origin = null;        // {lat, lng}
+let _routes = {};          // {veloce, breve, economica} → parsed route data
+let _selectedMode = null;  // 'veloce'|'breve'|'economica'
+let _activeRoute = null;   // route data in navigazione
+let _maneuvers = [];       // flat maneuver list
+let _polyCoords = [];      // [[lat,lng],...]
+let _curManIdx = 0;
+let _watchId = null;
+let _navMap = null;
+let _truckMarker = null;
+let _routeLayer = null;
+let _rerouteTimer = null;
+let _lastPos = null;
+let _announced = new Set();
+let _missionId = null;
+let _drvKey = null;
+let _modalitaLabels = { veloce:'⚡ Veloce', breve:'📏 Breve', economica:'💰 Economica' };
+let _acTimer = null;
+
+// ── URL PARAMS ───────────────────────────────────────────────
+const _params = new URLSearchParams(location.search);
+_drvKey    = _params.get('drvKey') || '';
+_missionId = _params.get('missionId') || '';
+const _paramDst      = _params.get('dst')      || '';
+const _paramDstLabel = _params.get('dstLabel') || '';
+const _paramModalita = _params.get('modalita') || '';
+
+// ── FLEXIBLE POLYLINE DECODER (HERE v8) ─────────────────────
+const _FP_DT = [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,-1,52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,-1,-1,-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,63,-1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51];
+function decodeFlexPoly(enc) {
+    const uints = []; let r = 0, sh = 0;
+    for (let i = 0; i < enc.length; i++) {
+        const v = _FP_DT[enc.charCodeAt(i)];
+        if (v < 0) continue;
+        r |= (v & 0x1F) << sh;
+        if ((v & 0x20) === 0) { uints.push(r); r = 0; sh = 0; } else sh += 5;
+    }
+    const toSigned = u => (u & 1) ? ~(u >> 1) : (u >> 1);
+    const hdr = uints[0], prec = hdr & 0xF, dim3 = (hdr >> 4) & 0x7;
+    const factor = Math.pow(10, prec);
+    const coords = []; let lat = 0, lng = 0, i = 1;
+    while (i < uints.length) {
+        lat += toSigned(uints[i++]); lng += toSigned(uints[i++]);
+        if (dim3) i++;
+        coords.push([lat / factor, lng / factor]);
+    }
+    return coords;
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+    showSpinner('Avvio navigator...');
+    await initGPSOrigin();
+    if (_paramModalita) _selectedMode = _paramModalita;
+
+    if (_paramDst) {
+        // Fast path: destinazione passata via URL dall'app
+        await loadFromParams();
+    } else if (_missionId) {
+        // Fallback: legge missione da Firebase
+        await loadMission(_missionId);
+    }
+    hideSpinner();
+});
+
+async function initGPSOrigin() {
+    return new Promise(res => {
+        if (!navigator.geolocation) { res(); return; }
+        navigator.geolocation.getCurrentPosition(pos => {
+            _origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            res();
+        }, () => res(), { timeout: 5000, maximumAge: 30000 });
+    });
+}
+
+async function loadFromParams() {
+    const label = _paramDstLabel || _paramDst;
+    document.getElementById('missionCard').style.display = '';
+    document.getElementById('missionRoute').innerHTML =
+        `<span>Posizione corrente</span><span class="mission-arrow">→</span><span>${label}</span>`;
+    document.getElementById('missionMeta').textContent =
+        _missionId ? `Missione ${_missionId}` : '';
+    document.getElementById('dstCard').style.display = 'none';
+    showSpinner('Geocodifica destinazione...');
+    const gc = await geocode(_paramDst);
+    if (gc) {
+        _dest = { ...gc, label };
+        document.getElementById('dstInput').value = label;
+        await calc3Routes();
+    } else {
+        showToast('Impossibile geocodificare la destinazione');
+        document.getElementById('dstCard').style.display = '';
+    }
+}
+
+async function loadMission(id) {
+    try {
+        // Missioni salvate nel nodo dispatcher/missions come array o mappa
+        const snap = await _db.ref('dispatcher/missions').once('value');
+        const data = snap.val();
+        if (!data) return;
+        const lista = Array.isArray(data) ? data : Object.values(data);
+        const m = lista.find(x => x && x.id === id);
+        if (!m) return;
+        document.getElementById('missionCard').style.display = '';
+        document.getElementById('missionRoute').innerHTML =
+            `<span>${m.fromNome || m.from || '—'}</span><span class="mission-arrow">→</span><span>${m.toNome || m.to || '—'}</span>`;
+        document.getElementById('missionMeta').textContent =
+            [m.cargo, m.cliente, m.rottaModalita ? _modalitaLabels[m.rottaModalita] : ''].filter(Boolean).join(' · ');
+        document.getElementById('dstCard').style.display = 'none';
+        const dstAddr = m.to || m.toNome || '';
+        if (dstAddr && dstAddr !== '—') {
+            showSpinner('Geocodifica destinazione...');
+            const gc = await geocode(dstAddr);
+            if (gc) {
+                _dest = gc;
+                document.getElementById('dstInput').value = gc.label;
+                if (!_selectedMode) _selectedMode = m.rottaModalita || null;
+                await calc3Routes();
+            }
+        }
+    } catch(e) { console.warn('loadMission:', e); }
+}
+
+// ── GEOCODING ────────────────────────────────────────────────
+async function geocode(query) {
+    try {
+        const r = await fetch(`${HERE_GEO}?apiKey=${HERE_KEY}&q=${encodeURIComponent(query)}&lang=it`);
+        const d = await r.json();
+        const item = d.items?.[0];
+        if (!item) return null;
+        return { lat: item.position.lat, lng: item.position.lng, label: item.address?.label || query };
+    } catch(e) { return null; }
+}
+
+let _acAbort = null;
+async function onDstInput() {
+    const q = document.getElementById('dstInput').value.trim();
+    const sugg = document.getElementById('dstSuggestions');
+    _dest = null; _routes = {}; renderRouteCards(); updateBtnStart();
+    if (q.length < 3) { sugg.style.display = 'none'; return; }
+    clearTimeout(_acTimer);
+    _acTimer = setTimeout(async () => {
+        try {
+            if (_acAbort) _acAbort.abort();
+            _acAbort = new AbortController();
+            const r = await fetch(`${HERE_AUTO}?apiKey=${HERE_KEY}&q=${encodeURIComponent(q)}&lang=it&limit=5`, { signal: _acAbort.signal });
+            const d = await r.json();
+            const items = d.items || [];
+            sugg.innerHTML = items.map((it, i) =>
+                `<div class="dst-sugg-item" onclick="selectSuggestion(${i})">${it.address?.label || it.title}</div>`
+            ).join('');
+            sugg.style.display = items.length ? '' : 'none';
+            sugg._items = items;
+        } catch(e) { if (e.name !== 'AbortError') sugg.style.display = 'none'; }
+    }, 350);
+}
+
+async function selectSuggestion(i) {
+    const items = document.getElementById('dstSuggestions')._items || [];
+    const item = items[i];
+    if (!item) return;
+    document.getElementById('dstSuggestions').style.display = 'none';
+    document.getElementById('dstInput').value = item.address?.label || item.title;
+    showSpinner('Geocodifica...');
+    const gc = await geocode(item.address?.label || item.title);
+    hideSpinner();
+    if (!gc) { showToast('Indirizzo non trovato'); return; }
+    _dest = gc;
+    await calc3Routes();
+}
+
+// ── ROUTING ──────────────────────────────────────────────────
+function buildRouteURL(extra) {
+    if (!_origin || !_dest) return null;
+    const qs = [
+        `apiKey=${HERE_KEY}`,
+        `transportMode=truck`,
+        `origin=${_origin.lat},${_origin.lng}`,
+        `destination=${_dest.lat},${_dest.lng}`,
+        `return=polyline,actions,summary,tolls`,
+        `lang=it`,
+        `departureTime=now`,
+        AVOID_CH,
+        `vehicle[grossWeight]=${TRUCK.grossWeight}`,
+        `vehicle[weightPerAxle]=${TRUCK.weightPerAxle}`,
+        `vehicle[height]=${TRUCK.height}`,
+        `vehicle[length]=${TRUCK.length}`,
+        `vehicle[width]=${TRUCK.width}`,
+        `vehicle[axleCount]=${TRUCK.axleCount}`,
+        `vehicle[trailerCount]=${TRUCK.trailerCount}`,
+        ...extra,
+    ];
+    return HERE_ROUTE + '?' + qs.join('&');
+}
+
+async function calc3Routes() {
+    if (!_dest) return;
+    if (!_origin) { showToast('GPS non ancora disponibile — riprova tra qualche secondo'); return; }
+    showSpinner('Calcolo 3 percorsi truck...');
+    try {
+        const [rV, rB, rE] = await Promise.allSettled([
+            fetch(buildRouteURL(['routingMode=fast'])).then(r => r.json()),
+            fetch(buildRouteURL(['routingMode=short'])).then(r => r.json()),
+            fetch(buildRouteURL(['routingMode=fast', 'avoid[features]=tollRoad'])).then(r => r.json()),
+        ]);
+        _routes = {
+            veloce:    rV.status === 'fulfilled' ? parseRoute(rV.value.routes?.[0]) : null,
+            breve:     rB.status === 'fulfilled' ? parseRoute(rB.value.routes?.[0]) : null,
+            economica: rE.status === 'fulfilled' ? parseRoute(rE.value.routes?.[0]) : null,
+        };
+        renderRouteCards();
+        // Seleziona automaticamente
+        const def = _selectedMode && _routes[_selectedMode] ? _selectedMode
+            : (_routes.veloce && _routes.economica && (_routes.veloce.totPedaggi - _routes.economica.totPedaggi) > 5) ? 'economica'
+            : 'veloce';
+        selectRoute(def);
+    } catch(e) {
+        console.warn('calc3Routes:', e);
+        showToast('Errore calcolo percorso');
+    }
+    hideSpinner();
+}
+
+function parseRoute(route) {
+    if (!route) return null;
+    const sections = route.sections || [];
+    let totM = 0, totS = 0, pedaggiEur = 0, hasTolls = false;
+    const actions = [], polyCoords = [];
+
+    sections.forEach(sec => {
+        totM += sec.summary?.length || 0;
+        totS += sec.summary?.duration || 0;
+        // Pedaggi
+        (sec.tolls || []).forEach(t => {
+            hasTolls = true;
+            for (const f of (t.fares || [])) {
+                const p = f.price, cp = f.convertedPrice;
+                if (p  && (p.currency  || '').toUpperCase() === 'EUR') { pedaggiEur += parseFloat(p.value  || 0); break; }
+                if (cp && (cp.currency || '').toUpperCase() === 'EUR') { pedaggiEur += parseFloat(cp.value || 0); break; }
+            }
+        });
+        if (sec.travelSummary?.hasTolls) hasTolls = true;
+        // Polyline
+        if (sec.polyline) {
+            const pts = decodeFlexPoly(sec.polyline);
+            polyCoords.push(...pts);
+        }
+        // Maneuvers
+        (sec.actions || []).forEach(a => {
+            actions.push({
+                instruction: a.instruction || '',
+                action: a.action || 'continue',
+                direction: a.direction || '',
+                length: a.length || 0,
+                duration: a.duration || 0,
+            });
+        });
+    });
+
+    const km = (totM / 1000).toFixed(1);
+    const mins = Math.round(totS / 60);
+    const tempo = mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `${mins}m`;
+    const totPedaggi = hasTolls ? pedaggiEur : 0;
+
+    return { km, tempo, totPedaggi, hasTolls, actions, polyCoords, _route: route };
+}
+
+// ── RENDER CARDS ─────────────────────────────────────────────
+function renderRouteCards() {
+    const el = document.getElementById('routeCards');
+    if (!_routes.veloce && !_routes.breve && !_routes.economica) {
+        el.innerHTML = '<div class="route-loading" style="grid-column:1/-1">Inserisci destinazione per calcolare i percorsi</div>';
+        return;
+    }
+    const risparmio = (_routes.veloce && _routes.economica)
+        ? Math.max(0, _routes.veloce.totPedaggi - _routes.economica.totPedaggi) : 0;
+
+    function card(id, icon, name, r) {
+        if (!r) return `<div class="route-card unavail" data-m="${id}">
+            <div class="route-card-icon">${icon}</div>
+            <div class="route-card-name">${name}</div>
+            <div class="route-card-time" style="margin-top:6px">Non disponibile</div>
+        </div>`;
+        const tollHtml = r.totPedaggi > 0.01
+            ? `<div class="route-card-toll toll-cost">€${r.totPedaggi.toFixed(0)} pedaggi</div>`
+            : `<div class="route-card-toll toll-zero">Nessun pedaggio</div>`;
+        const savingHtml = id === 'economica' && risparmio > 0.5
+            ? `<div class="route-card-saving">Risparmio €${risparmio.toFixed(0)}</div>` : '';
+        return `<div class="route-card" data-m="${id}" onclick="selectRoute('${id}')">
+            <div class="route-card-icon">${icon}</div>
+            <div class="route-card-name">${name}</div>
+            <div class="route-card-km">${r.km} km</div>
+            <div class="route-card-time">${r.tempo}</div>
+            ${tollHtml}${savingHtml}
+        </div>`;
+    }
+    el.innerHTML =
+        card('veloce',    '⚡', 'Veloce',    _routes.veloce) +
+        card('breve',     '📏', 'Breve',     _routes.breve) +
+        card('economica', '💰', 'Economica', _routes.economica);
+}
+
+function selectRoute(mode) {
+    if (!_routes[mode]) return;
+    _selectedMode = mode;
+    document.querySelectorAll('.route-card').forEach(c =>
+        c.classList.toggle('selected', c.dataset.m === mode));
+    updateBtnStart();
+}
+
+function updateBtnStart() {
+    document.getElementById('btnStart').disabled = !(_dest && _selectedMode && _routes[_selectedMode]);
+}
+
+// ── INIZIA NAVIGAZIONE ────────────────────────────────────────
+function iniziaNavigazione() {
+    if (!_dest || !_selectedMode || !_routes[_selectedMode]) return;
+    _activeRoute = _routes[_selectedMode];
+    _polyCoords  = _activeRoute.polyCoords;
+    _maneuvers   = _activeRoute.actions;
+    _curManIdx   = 0;
+    _announced.clear();
+
+    // Mostra screen nav
+    document.getElementById('screenSetup').style.display = 'none';
+    document.getElementById('screenNav').style.display = 'flex';
+
+    // Label modalità
+    document.getElementById('navModalitaLabel').textContent = _modalitaLabels[_selectedMode] || '';
+
+    // Init mappa Leaflet
+    if (!_navMap) {
+        _navMap = L.map('navMap', { zoomControl: true, attributionControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 20, attribution: '© OSM'
+        }).addTo(_navMap);
+    }
+
+    // Disegna rotta
+    if (_routeLayer) _navMap.removeLayer(_routeLayer);
+    const colMap = { veloce:'#3498db', breve:'#27ae60', economica:'#f39c12' };
+    _routeLayer = L.polyline(_polyCoords, {
+        color: colMap[_selectedMode] || '#E30613',
+        weight: 6, opacity: 0.85
+    }).addTo(_navMap);
+    _navMap.fitBounds(_routeLayer.getBounds(), { padding: [40, 40] });
+
+    // Marker truck
+    if (!_truckMarker) {
+        const icon = L.divIcon({
+            html: '<div class="truck-icon-wrap">🚛</div>',
+            className: '', iconSize: [32, 32], iconAnchor: [16, 16]
+        });
+        _truckMarker = L.marker([_origin.lat, _origin.lng], { icon }).addTo(_navMap);
+    } else {
+        _truckMarker.setLatLng([_origin.lat, _origin.lng]);
+    }
+
+    // Aggiorna banner con prima maneuver
+    aggiornaManeuverBanner();
+
+    // Avvia GPS
+    if (_watchId) navigator.geolocation.clearWatch(_watchId);
+    _watchId = navigator.geolocation.watchPosition(onGPS, null, {
+        enableHighAccuracy: true, maximumAge: 3000, timeout: 10000
+    });
+
+    // Ricalcolo automatico ogni 20 min
+    if (_rerouteTimer) clearInterval(_rerouteTimer);
+    _rerouteTimer = setInterval(forzaRicalcolo, 20 * 60 * 1000);
+}
+
+// ── GPS UPDATE ────────────────────────────────────────────────
+function onGPS(pos) {
+    const { latitude: lat, longitude: lng, speed } = pos.coords;
+    _lastPos = { lat, lng };
+    _origin  = { lat, lng };
+
+    // Aggiorna marker
+    _truckMarker.setLatLng([lat, lng]);
+
+    // Velocità
+    const kmh = speed != null ? Math.round(speed * 3.6) : null;
+    document.getElementById('speedVal').textContent = kmh ?? '—';
+
+    // Distanza rimanente fino alla destinazione
+    if (_polyCoords.length > 0) {
+        const distRem = haversine(lat, lng, _dest.lat, _dest.lng);
+        document.getElementById('distRemain').textContent = distRem > 1
+            ? distRem.toFixed(1) + ' km al traguardo'
+            : Math.round(distRem * 1000) + ' m al traguardo';
+        // ETA semplice: distanza / velocità media 70 km/h (o GPS speed)
+        const avgKmh = (kmh && kmh > 5) ? kmh : 70;
+        const etaMins = Math.round((distRem / avgKmh) * 60);
+        const etaDate = new Date(Date.now() + etaMins * 60000);
+        document.getElementById('etaTime').textContent =
+            etaDate.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
+    }
+
+    // Arrivati?
+    if (haversine(lat, lng, _dest.lat, _dest.lng) < 0.05) {
+        arrivoDestinazione();
+        return;
+    }
+
+    // Trova maneuver corrente
+    aggiornaManeuverCorrente(lat, lng);
+
+    // Centra mappa sul camion
+    _navMap.panTo([lat, lng], { animate: true, duration: 0.5 });
+}
+
+function aggiornaManeuverCorrente(lat, lng) {
+    if (_maneuvers.length === 0) return;
+
+    // Trova maneuver attiva: cerca la più vicina non ancora completata
+    // Strategia: calcola distanza accumulata dalla posizione corrente sulla polyline
+    let closestIdx = 0, minDist = Infinity;
+    for (let i = 0; i < _polyCoords.length; i++) {
+        const d = haversine(lat, lng, _polyCoords[i][0], _polyCoords[i][1]);
+        if (d < minDist) { minDist = d; closestIdx = i; }
+    }
+
+    // Stima maneuver corrente basata sulla proporzione di polyline percorsa
+    const progress = closestIdx / Math.max(_polyCoords.length - 1, 1);
+    const manIdx = Math.min(Math.floor(progress * _maneuvers.length), _maneuvers.length - 1);
+    if (manIdx !== _curManIdx) {
+        _curManIdx = manIdx;
+        aggiornaManeuverBanner();
+    }
+
+    // Distanza alla prossima maneuver
+    const man = _maneuvers[_curManIdx];
+    if (man && !_announced.has(_curManIdx)) {
+        const distToNextKm = (man.length || 0) / 1000 * (1 - progress);
+        if (distToNextKm < 0.3) {
+            _announced.add(_curManIdx);
+            annuncia(man.instruction);
+        }
+    }
+}
+
+function aggiornaManeuverBanner() {
+    if (_maneuvers.length === 0) return;
+    const man = _maneuvers[Math.min(_curManIdx, _maneuvers.length - 1)];
+    const next = _maneuvers[_curManIdx + 1];
+
+    document.getElementById('maneuverArrow').textContent = directionArrow(man.action, man.direction);
+    document.getElementById('maneuverInstruction').textContent = man.instruction || 'Prosegui dritto';
+    const distKm = (man.length || 0) / 1000;
+    document.getElementById('maneuverDist').textContent =
+        distKm > 1 ? `Tra ${distKm.toFixed(1)} km` : distKm > 0 ? `Tra ${Math.round(distKm * 1000)} m` : '';
+    document.getElementById('maneuverNext').textContent = next ? `Poi: ${next.instruction}` : '';
+}
+
+function directionArrow(action, direction) {
+    if (action === 'arrive') return '🏁';
+    if (action === 'depart') return '▲';
+    const map = {
+        left:'←', right:'→', slightLeft:'↖', slightRight:'↗',
+        sharpLeft:'↙', sharpRight:'↘', uTurnLeft:'↩', uTurnRight:'↪',
+        straight:'↑', keepLeft:'↖', keepRight:'↗'
+    };
+    return map[direction] || '↑';
+}
+
+// ── HAVERSINE ─────────────────────────────────────────────────
+function haversine(lat1, lng1, lat2, lng2) {
+    const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── VOICE ─────────────────────────────────────────────────────
+function annuncia(text) {
+    if (!text || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'it-IT';
+    utt.rate = 0.95;
+    window.speechSynthesis.speak(utt);
+}
+
+// ── RICALCOLO ─────────────────────────────────────────────────
+async function forzaRicalcolo() {
+    if (!_dest || !_selectedMode || !_lastPos) return;
+    showSpinner('Ricalcolo percorso...');
+    try {
+        const qs = [
+            `apiKey=${HERE_KEY}`,
+            `transportMode=truck`,
+            `origin=${_lastPos.lat},${_lastPos.lng}`,
+            `destination=${_dest.lat},${_dest.lng}`,
+            `return=polyline,actions,summary,tolls`,
+            `lang=it`,
+            `departureTime=now`,
+            AVOID_CH,
+            `vehicle[grossWeight]=${TRUCK.grossWeight}`,
+            `vehicle[weightPerAxle]=${TRUCK.weightPerAxle}`,
+            `vehicle[height]=${TRUCK.height}`,
+            `vehicle[length]=${TRUCK.length}`,
+            `vehicle[width]=${TRUCK.width}`,
+            `vehicle[axleCount]=${TRUCK.axleCount}`,
+            `vehicle[trailerCount]=${TRUCK.trailerCount}`,
+            _selectedMode === 'economica' ? 'avoid[features]=tollRoad' : '',
+            _selectedMode === 'breve' ? 'routingMode=short' : 'routingMode=fast',
+        ].filter(Boolean);
+        const resp = await fetch(HERE_ROUTE + '?' + qs.join('&'));
+        const data = await resp.json();
+        const route = parseRoute(data.routes?.[0]);
+        if (route) {
+            _activeRoute = route;
+            _polyCoords  = route.polyCoords;
+            _maneuvers   = route.actions;
+            _curManIdx   = 0;
+            _announced.clear();
+            if (_routeLayer) _navMap.removeLayer(_routeLayer);
+            const colMap = { veloce:'#3498db', breve:'#27ae60', economica:'#f39c12' };
+            _routeLayer = L.polyline(_polyCoords, { color: colMap[_selectedMode] || '#E30613', weight: 6, opacity: 0.85 }).addTo(_navMap);
+            aggiornaManeuverBanner();
+            showToast('Percorso aggiornato');
+        }
+    } catch(e) { showToast('Errore ricalcolo'); }
+    hideSpinner();
+}
+
+// ── ARRIVO ────────────────────────────────────────────────────
+function arrivoDestinazione() {
+    stopNavigazione(false);
+    annuncia('Sei arrivato a destinazione!');
+    document.getElementById('maneuverArrow').textContent = '🏁';
+    document.getElementById('maneuverInstruction').textContent = 'Sei arrivato a destinazione!';
+    document.getElementById('maneuverDist').textContent = '';
+    document.getElementById('maneuverNext').textContent = '';
+    document.getElementById('speedVal').textContent = '0';
+    showToast('🏁 Destinazione raggiunta!');
+}
+
+// ── STOP ─────────────────────────────────────────────────────
+function stopNavigazione(goBack = true) {
+    if (_watchId)     { navigator.geolocation.clearWatch(_watchId); _watchId = null; }
+    if (_rerouteTimer){ clearInterval(_rerouteTimer); _rerouteTimer = null; }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (goBack) {
+        document.getElementById('screenNav').style.display = 'none';
+        document.getElementById('screenSetup').style.display = 'flex';
+    }
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────
+function showSpinner(msg) {
+    document.getElementById('spinnerText').textContent = msg || '...';
+    document.getElementById('spinner').classList.add('show');
+}
+function hideSpinner() {
+    document.getElementById('spinner').classList.remove('show');
+}
+let _toastTimer;
+function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

@@ -2212,6 +2212,19 @@ function avviaNavi() {
     window.open(url, '_blank');
 }
 
+function apriNavigatorIbersilos() {
+    var params = new URLSearchParams();
+    if (currentDriver && currentDriver.code) params.set('drvKey', currentDriver.code);
+    if (missioneCorrente) {
+        if (missioneCorrente.id)     params.set('missionId', missioneCorrente.id);
+        if (missioneCorrente.to)     params.set('dst', missioneCorrente.to);
+        if (missioneCorrente.toNome) params.set('dstLabel', missioneCorrente.toNome);
+        if (missioneCorrente.from)   params.set('src', missioneCorrente.from);
+        if (missioneCorrente.rottaModalita) params.set('modalita', missioneCorrente.rottaModalita);
+    }
+    window.location.href = 'navigator.html?' + params.toString();
+}
+
 function tentaDeepLink(deepUrl, fallbackUrl, appName) {
     // Tenta deep link nativo; dopo 2s se l'app non risponde apre il fallback
     try {
