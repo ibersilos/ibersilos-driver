@@ -2176,62 +2176,40 @@ const MEZZO = {
 };
 
 function avviaNavi() {
-    // Costruisce il deep link Eurowag con il percorso pre-calcolato dal DSP
-    // Se la missione ha tappe, le passa come waypoint sequenziali
-    // in modo che Eurowag segua esattamente il percorso pianificato
-
-    var dest = (document.getElementById('navDest') || {}).value || '';
-
-    // Raccoglie waypoint dal percorso DSP (tappe della missione)
     var waypoints = [];
     if (missioneCorrente) {
         var tappe = missioneCorrente.tappe || missioneCorrente.waypoints || missioneCorrente.fermate;
         if (tappe && Array.isArray(tappe) && tappe.length) {
-            // Usa indirizzi delle tappe come waypoint sequenziali
             tappe.forEach(function(t) {
                 var addr = t.indirizzo || t.address || t.label || '';
                 if (addr) waypoints.push(addr);
             });
         }
     }
-
-    // Se non ci sono tappe, usa from → to della missione come waypoint
     if (!waypoints.length && missioneCorrente) {
         if (missioneCorrente.from) waypoints.push(missioneCorrente.from);
         if (missioneCorrente.to)   waypoints.push(missioneCorrente.to);
     }
-
-    // Fallback: usa il campo destinazione manuale
-    if (!waypoints.length && dest) {
-        waypoints.push(dest);
-    }
+    var dest = (document.getElementById('navDest') || {}).value || '';
+    if (!waypoints.length && dest) waypoints.push(dest);
 
     if (!waypoints.length) {
-        // Apri Eurowag senza destinazione
-        tentaDeepLink('eurowagnavi://', 'https://www.eurowag.com/it/navigazione', 'Eurowag Navi');
+        window.open('https://maps.google.com', '_blank');
         return;
     }
 
-    // Deep link Eurowag con waypoint multipli
-    // Formato: eurowagnavi://navigate?destination=...&waypoint[0]=...&waypoint[1]=...
-    var url = 'eurowagnavi://navigate?destination=' + encodeURIComponent(waypoints[waypoints.length - 1])
-        + '&vehicleType=truck'
-        + '&weight='  + MEZZO.weight
-        + '&height='  + MEZZO.height
-        + '&length='  + MEZZO.length
-        + '&width='   + MEZZO.width;
-
-    // Aggiungi waypoint intermedi (tutto tranne ultimo che è la destinazione)
-    for (var i = 0; i < waypoints.length - 1; i++) {
-        url += '&waypoint[' + i + ']=' + encodeURIComponent(waypoints[i]);
+    // Costruisce URL Google Maps con tappe sequenziali
+    // Formato: daddr=tappa1+to:tappa2+to:destinazione
+    var daddr = waypoints.map(encodeURIComponent).join('+to:');
+    var url = 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(waypoints[waypoints.length - 1]);
+    if (waypoints.length > 1) {
+        url += '&waypoints=' + waypoints.slice(0, waypoints.length - 1).map(encodeURIComponent).join('|');
     }
-
-    // Aggiungi posizione corrente come punto di partenza se disponibile
     if (currentLat && currentLng) {
-        url += '&from=' + currentLat + ',' + currentLng;
+        url += '&origin=' + currentLat + ',' + currentLng;
     }
 
-    tentaDeepLink(url, 'https://www.eurowag.com/it/navigazione', 'Eurowag Navi');
+    window.open(url, '_blank');
 }
 
 function tentaDeepLink(deepUrl, fallbackUrl, appName) {
