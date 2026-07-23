@@ -211,7 +211,7 @@ const HERE_ROUTE= 'https://router.hereapi.com/v8/routes';
 const AVOID_CH  = 'avoid[areas]=bbox:5.956,45.818,10.492,47.808';
 
 // Profilo veicolo 40t EU — semirimorchio 5 assi
-const TRUCK = { grossWeight:40000, weightPerAxle:12000, height:380, length:1650, width:255, axleCount:5, trailerCount:1, type:'semiTrailer' };
+const TRUCK = { grossWeight:40000, weightPerAxle:12000, height:380, length:1650, width:255, axleCount:5, trailerCount:1 };
 
 // ── STATE ────────────────────────────────────────────────────
 let _dest = null;          // {lat, lng, label}
@@ -302,7 +302,7 @@ function _showMissionCard(src, dst, meta) {
     document.getElementById('missionCard').style.display = '';
     document.getElementById('dstCard').style.display = 'none';
     document.getElementById('missionRoute').innerHTML =
-        `<span>${src}</span><span class="mission-arrow">→</span><span>${dst}</span>`;
+        `<span>${esc(src)}</span><span class="mission-arrow">→</span><span>${esc(dst)}</span>`;
     document.getElementById('missionMeta').textContent = meta;
 }
 
@@ -384,7 +384,7 @@ function _autocomplete(inputId, suggId, onSelect) {
             const d = await r.json();
             const items = d.items || [];
             sugg.innerHTML = items.map((it, i) =>
-                `<div class="dst-sugg-item" onclick="${onSelect}(${i})">${it.address?.label || it.title}</div>`
+                `<div class="dst-sugg-item" onclick="${onSelect}(${i})">${esc(it.address?.label || it.title)}</div>`
             ).join('');
             sugg.style.display = items.length ? '' : 'none';
             sugg._items = items;
@@ -732,7 +732,13 @@ function aggiornaManeuverCorrente(lat, lng) {
 }
 
 function aggiornaManeuverBanner() {
-    if (_maneuvers.length === 0) return;
+    if (_maneuvers.length === 0) {
+        document.getElementById('maneuverArrow').textContent = '↑';
+        document.getElementById('maneuverInstruction').textContent = 'Navigazione attiva';
+        document.getElementById('maneuverDist').textContent = '';
+        document.getElementById('maneuverNext').textContent = '';
+        return;
+    }
     const man = _maneuvers[Math.min(_curManIdx, _maneuvers.length - 1)];
     const next = _maneuvers[_curManIdx + 1];
 
@@ -838,7 +844,16 @@ function stopNavigazione(goBack = true) {
     }
 }
 
+window.addEventListener('beforeunload', () => {
+    if (_watchId !== null) navigator.geolocation.clearWatch(_watchId);
+    if (_rerouteTimer) clearInterval(_rerouteTimer);
+});
+
 // ── UI HELPERS ────────────────────────────────────────────────
+function esc(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 function showSpinner(msg) {
     document.getElementById('spinnerText').textContent = msg || '...';
     document.getElementById('spinner').classList.add('show');
