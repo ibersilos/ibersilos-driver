@@ -207,8 +207,8 @@ const HERE_AUTO = 'https://autocomplete.search.hereapi.com/v1/autocomplete';
 const HERE_ROUTE= 'https://router.hereapi.com/v8/routes';
 const AVOID_CH  = 'avoid[areas]=bbox:5.956,45.818,10.492,47.808';
 
-// Profilo veicolo (stesso del DSP)
-const TRUCK = { grossWeight:40000, weightPerAxle:12000, height:380, length:1650, width:255, axleCount:5, trailerCount:1 };
+// Profilo veicolo 40t EU — semirimorchio 5 assi
+const TRUCK = { grossWeight:40000, weightPerAxle:12000, height:380, length:1650, width:255, axleCount:5, trailerCount:1, type:'semiTrailer' };
 
 // ── STATE ────────────────────────────────────────────────────
 let _dest = null;          // {lat, lng, label}
@@ -410,6 +410,7 @@ function buildRouteURL(extra) {
         `vehicle[width]=${TRUCK.width}`,
         `vehicle[axleCount]=${TRUCK.axleCount}`,
         `vehicle[trailerCount]=${TRUCK.trailerCount}`,
+        `vehicle[type]=${TRUCK.type}`,
         ...extra,
     ];
     return HERE_ROUTE + '?' + qs.join('&');
@@ -724,6 +725,7 @@ async function forzaRicalcolo() {
             `vehicle[width]=${TRUCK.width}`,
             `vehicle[axleCount]=${TRUCK.axleCount}`,
             `vehicle[trailerCount]=${TRUCK.trailerCount}`,
+        `vehicle[type]=${TRUCK.type}`,
             _selectedMode === 'economica' ? 'avoid[features]=tollRoad' : '',
             _selectedMode === 'breve' ? 'routingMode=short' : 'routingMode=fast',
         ].filter(Boolean);
