@@ -286,20 +286,27 @@ async function initGPSOrigin() {
 
 async function loadFromParams() {
     const label = _paramDstLabel || _paramDst;
+    const src   = _params.get('src') || 'Posizione corrente';
+
+    // Mostra subito la card missione con i dati disponibili
     document.getElementById('missionCard').style.display = '';
     document.getElementById('missionRoute').innerHTML =
-        `<span>Posizione corrente</span><span class="mission-arrow">→</span><span>${label}</span>`;
+        `<span>${src}</span><span class="mission-arrow">→</span><span>${label}</span>`;
     document.getElementById('missionMeta').textContent =
-        _missionId ? `Missione ${_missionId}` : '';
+        [_missionId, _selectedMode ? _modalitaLabels[_selectedMode] : ''].filter(Boolean).join(' · ');
+
+    // Pre-compila l'input destinazione e nascondi la card manuale
+    document.getElementById('dstInput').value = label;
     document.getElementById('dstCard').style.display = 'none';
+
     showSpinner('Geocodifica destinazione...');
     const gc = await geocode(_paramDst);
     if (gc) {
         _dest = { ...gc, label };
-        document.getElementById('dstInput').value = label;
         await calc3Routes();
     } else {
-        showToast('Impossibile geocodificare la destinazione');
+        // Geocoding fallito: mostra l'input pre-compilato così il driver può rifinire
+        showToast('Premi "Cerca" per trovare la destinazione');
         document.getElementById('dstCard').style.display = '';
     }
 }

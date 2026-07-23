@@ -2216,11 +2216,22 @@ function apriNavigatorIbersilos() {
     var params = new URLSearchParams();
     if (currentDriver && currentDriver.code) params.set('drvKey', currentDriver.code);
     if (missioneCorrente) {
-        if (missioneCorrente.id)     params.set('missionId', missioneCorrente.id);
-        if (missioneCorrente.to)     params.set('dst', missioneCorrente.to);
-        if (missioneCorrente.toNome) params.set('dstLabel', missioneCorrente.toNome);
-        if (missioneCorrente.from)   params.set('src', missioneCorrente.from);
-        if (missioneCorrente.rottaModalita) params.set('modalita', missioneCorrente.rottaModalita);
+        var m = missioneCorrente;
+        if (m.id) params.set('missionId', m.id);
+        // Etichetta leggibile: preferisce toNome (es. "Torino") a to (indirizzo completo)
+        var dstLabel = (m.toNome && m.toNome !== '—') ? m.toNome : '';
+        // Stringa per geocoding: prima toNome se abbastanza lunga, poi to
+        var dst = '';
+        if (m.toNome && m.toNome !== '—' && m.toNome.length > 2) dst = m.toNome;
+        else if (m.to   && m.to   !== '—') dst = m.to;
+        if (dst) {
+            params.set('dst', dst);
+            if (dstLabel && dstLabel !== dst) params.set('dstLabel', dstLabel);
+        }
+        // Anche partenza come contesto (opzionale)
+        var src = (m.fromNome && m.fromNome !== '—') ? m.fromNome : (m.from && m.from !== '—' ? m.from : '');
+        if (src) params.set('src', src);
+        if (m.rottaModalita) params.set('modalita', m.rottaModalita);
     }
     window.location.href = 'navigator.html?' + params.toString();
 }
