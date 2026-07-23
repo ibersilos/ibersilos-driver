@@ -289,7 +289,8 @@ function avviaGPS() {
         const prima = !_origin;
         _origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         // Se la destinazione è già pronta e non abbiamo ancora calcolato → avvia ora
-        if (prima && _dest && Object.keys(_routes).length === 0) calc3Routes();
+        const _hasAnyRoutePrima = Object.values(_routes).some(r => r !== null);
+        if (prima && _dest && !_hasAnyRoutePrima) calc3Routes();
     }, () => {}, { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 });
 
     // watchPosition ad alta precisione per la navigazione
@@ -432,7 +433,7 @@ function buildRouteURL(extra) {
         `transportMode=truck`,
         `origin=${_origin.lat},${_origin.lng}`,
         `destination=${_dest.lat},${_dest.lng}`,
-        `return=polyline,actions,summary,tolls`,
+        `return=polyline,actions,summary`,
         `lang=it`,
         `departureTime=now`,
         AVOID_CH,
@@ -468,6 +469,23 @@ async function calc3Routes() {
             economica: rE.status === 'fulfilled' ? parseRoute(rE.value.routes?.[0]) : null,
         };
         renderRouteCards();
+        // Feedback errore se TUTTE le rotte sono null
+        const allNull = !_routes.veloce && !_routes.breve && !_routes.economica;
+        if (allNull) {
+            const firstReject = [rV, rB, rE].find(r => r.status === 'rejected');
+            let errMsg;
+            if (firstReject) {
+                errMsg = String(firstReject.reason).slice(0, 80);
+            } else {
+                // fulfilled ma senza routes → estrai testo errore dalla risposta
+                const firstFulfilled = [rV, rB, rE].find(r => r.status === 'fulfilled');
+                const notice = firstFulfilled?.value?.notices?.[0] || firstFulfilled?.value?.error;
+                errMsg = notice ? (notice.title || notice.message || JSON.stringify(notice)).slice(0, 80) : 'Nessun percorso trovato';
+            }
+            showToast('Errore HERE: ' + errMsg);
+            console.error('HERE API error — URL test:', buildRouteURL(['routingMode=fast']));
+            console.error('HERE response V:', rV.status === 'fulfilled' ? rV.value : rV.reason);
+        }
         // Seleziona automaticamente
         const def = _selectedMode && _routes[_selectedMode] ? _selectedMode
             : (_routes.veloce && _routes.economica && (_routes.veloce.totPedaggi - _routes.economica.totPedaggi) > 5) ? 'economica'
@@ -568,7 +586,7 @@ function selectRoute(mode) {
 }
 
 function updateBtnStart() {
-    document.getElementById('btnStart').disabled = !(_dest && _origin && _selectedMode && _routes[_selectedMode]);
+    document.getElementById('btnStart').disabled = !(_dest && _selectedMode && _routes[_selectedMode]);
 }
 
 // ── INIZIA NAVIGAZIONE ────────────────────────────────────────
@@ -620,15 +638,18 @@ function iniziaNavigazione() {
             _navMap.setView([_origin.lat, _origin.lng], 13);
         }
 
-        // Marker truck
+        // Marker truck — usa _origin se disponibile, altrimenti _dest come posizione temporanea
+        const startPos = _origin || _dest;
         const icon = L.divIcon({
             html: '<div class="truck-icon-wrap">🚛</div>',
             className: '', iconSize: [32, 32], iconAnchor: [16, 16]
         });
-        if (!_truckMarker) {
-            _truckMarker = L.marker([_origin.lat, _origin.lng], { icon }).addTo(_navMap);
-        } else {
-            _truckMarker.setLatLng([_origin.lat, _origin.lng]);
+        if (startPos) {
+            if (!_truckMarker) {
+                _truckMarker = L.marker([startPos.lat, startPos.lng], { icon }).addTo(_navMap);
+            } else {
+                _truckMarker.setLatLng([startPos.lat, startPos.lng]);
+            }
         }
     }, 50);
 
@@ -644,7 +665,8 @@ function onGPS(pos) {
     _origin  = { lat, lng };
 
     // Prima fix GPS dopo destinazione pronta ma senza rotte ancora → calcola ora
-    if (_dest && Object.keys(_routes).length === 0) { calc3Routes(); return; }
+    const hasAnyRoute = Object.values(_routes).some(r => r !== null);
+    if (_dest && !hasAnyRoute) { calc3Routes(); return; }
 
     // Se la navigazione non è ancora iniziata, usciamo qui
     if (!_truckMarker || !_navMap) return;
@@ -760,7 +782,7 @@ async function forzaRicalcolo() {
             `transportMode=truck`,
             `origin=${_lastPos.lat},${_lastPos.lng}`,
             `destination=${_dest.lat},${_dest.lng}`,
-            `return=polyline,actions,summary,tolls`,
+            `return=polyline,actions,summary`,
             `lang=it`,
             `departureTime=now`,
             AVOID_CH,
