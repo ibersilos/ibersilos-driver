@@ -1607,10 +1607,7 @@ const PAESI_INFO = {
 };
 
 function chiudiSoloTrasferta() {
-    const ore = parseFloat(document.getElementById('rapOreGuida').value);
-    if (!ore || ore < 1) {
-        showToast('Ore di guida richieste', 'Seleziona le ore di guida (min 1) prima di chiudere', 'error');
-        return;
+    const ore = parseFloat(document.getElementById('rapOreGuida').value) || 0;
     }
     if (!confirm('Chiudere il rapportino come giornata di sola trasferta?')) return;
 
@@ -1669,7 +1666,11 @@ function confermaPaeseSosta(codice) {
 
 function chiudiRapportino() {
     const km = parseInt(document.getElementById('rapKmInput').value, 10) || 0;
-    const ore = parseFloat(document.getElementById('rapOreGuida').value) || 0;
+    const ore = parseFloat(document.getElementById('rapOreGuida').value);
+    if (!ore || ore < 1) {
+        showToast('Ore di guida richieste', 'Seleziona le ore di guida (min 1) prima di chiudere', 'error');
+        return;
+    }
     }
     const docs = loadDocViaggio(currentDriver.targa);
     const isToday = (selectedRapDate || getToday()) === getToday();
