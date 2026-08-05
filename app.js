@@ -1541,9 +1541,8 @@ function salvaRifornimento() {
     if (!tipo) { showToast('Seleziona il tipo di carburante', '', 'warning'); return; }
     if (!litri || litri <= 0) { showToast('Inserisci i litri', '', 'warning'); return; }
     if (!prezzo || prezzo <= 0) { showToast('Inserisci il prezzo per litro', '', 'warning'); return; }
-    if (!scontrinoDataUrl) {
+    if (false && !scontrinoDataUrl) {
         showToast('Scan obbligatorio', 'Scansiona lo scontrino prima di salvare', 'error');
-        // Shake animation
         const wrap = document.getElementById('rifScontrinoZoneWrap');
         wrap.style.outline = '2px solid var(--red)';
         wrap.style.borderRadius = '14px';
@@ -1608,7 +1607,6 @@ const PAESI_INFO = {
 
 function chiudiSoloTrasferta() {
     const ore = parseFloat(document.getElementById('rapOreGuida').value) || 0;
-    }
     if (!confirm('Chiudere il rapportino come giornata di sola trasferta?')) return;
 
     const rap = loadRapportino(currentDriver.targa);
@@ -1670,7 +1668,6 @@ function chiudiRapportino() {
     if (!ore || ore < 1) {
         showToast('Ore di guida richieste', 'Seleziona le ore di guida (min 1) prima di chiudere', 'error');
         return;
-    }
     }
     const docs = loadDocViaggio(currentDriver.targa);
     const isToday = (selectedRapDate || getToday()) === getToday();
