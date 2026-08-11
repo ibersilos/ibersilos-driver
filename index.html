@@ -1066,50 +1066,6 @@
             <div style="font-size:2rem;font-weight:800;color:white;line-height:1.2;" id="rifTotaleVal">€ 0.00</div>
         </div>
 
-        <!-- SCAN SCONTRINO - obbligatorio -->
-        <div class="form-group" style="margin-bottom:20px;">
-            <label class="form-label">
-                Scan Scontrino *
-                <span style="background:var(--red);color:white;font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:5px;letter-spacing:0.5px;">OBBLIGATORIO</span>
-            </label>
-
-            <!-- Zona scan con 2 opzioni — input SEPARATI per camera/galleria -->
-            <div id="rifScontrinoZoneWrap">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-                    <!-- Bottone CAMERA: capture=environment forza apertura camera -->
-                    <label for="inputScan" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 8px;border:2px dashed var(--border);border-radius:12px;cursor:pointer;background:white;text-align:center;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--border)'">
-                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                            <circle cx="12" cy="13" r="4"/>
-                        </svg>
-                        <span style="font-size:0.78rem;font-weight:700;color:var(--black);">📷 Camera</span>
-                        <span style="font-size:0.66rem;color:var(--text-dim);">Scatta foto</span>
-                    </label>
-                    <!-- Bottone GALLERIA: nessun capture, apre file picker -->
-                    <label for="inputGallery" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 8px;border:2px dashed var(--border);border-radius:12px;cursor:pointer;background:white;text-align:center;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--yellow)'" onmouseout="this.style.borderColor='var(--border)'">
-                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                        </svg>
-                        <span style="font-size:0.78rem;font-weight:700;color:var(--black);">🖼️ Galleria</span>
-                        <span style="font-size:0.66rem;color:var(--text-dim);">Da album / PDF</span>
-                    </label>
-                </div>
-                <!-- Due input separati: camera con capture, galleria senza -->
-                <input type="file" id="inputScan" accept="image/*" capture="environment" style="display:none;" onchange="gestisciScontrino(this)">
-                <input type="file" id="inputGallery" accept="image/*,application/pdf" style="display:none;" onchange="gestisciScontrino(this)">
-                <div style="font-size:0.68rem;color:var(--text-dim);text-align:center;margin-top:2px;">JPG · PNG · PDF</div>
-            </div>
-
-            <!-- Preview scontrino -->
-            <div id="rifScontrinoPreview" style="display:none;margin-top:10px;position:relative;">
-                <img id="rifScontrinoImg" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;border:2px solid var(--green);background:#f8f8f8;" />
-                <button onclick="rimuoviScontrino()" style="position:absolute;top:8px;right:8px;background:var(--red);color:white;border:none;border-radius:50%;width:30px;height:30px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,0.2);">×</button>
-                <div style="font-size:0.72rem;color:var(--green);font-weight:700;margin-top:6px;display:flex;align-items:center;gap:5px;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span id="rifScontrinoLabel">Documento allegato</span>
-                </div>
-            </div>
-        </div>
 
         <div class="input-row">
             <button class="btn-secondary" onclick="chiudiModal('modalRif')">Annulla</button>
@@ -1208,7 +1164,7 @@
 
 
 
-<script src="app.js?v=20260727"></script>
+<script src="app.js?v=20260728"></script>
 <script>
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/ibersilos-driver/sw.js');

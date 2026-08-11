@@ -1168,12 +1168,6 @@ function rapKeyDate(targa, date) {
     return date === getToday() ? rapKey(targa) : 'ibs_rap_' + targa + '_' + date;
 }
 
-function cambiaCalMese(delta) {
-    calMese += delta;
-    if (calMese > 11) { calMese = 0; calAnno++; }
-    if (calMese < 0)  { calMese = 11; calAnno--; }
-    if (currentDriver) renderCalendarioRapportino(currentDriver.targa);
-}
 
 function getToday() {
     const d = new Date();
@@ -1504,33 +1498,7 @@ function calcolaImporto() {
     }
 }
 
-function gestisciScontrino(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const isPdf = file.type === 'application/pdf';
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        scontrinoDataUrl = e.target.result;
-        // Per PDF mostra icona placeholder, per immagini mostra preview
-        if (isPdf) {
-            document.getElementById('rifScontrinoImg').src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="140" viewBox="0 0 200 140"><rect width="200" height="140" fill="%23f5f5f5" rx="8"/><text x="100" y="55" text-anchor="middle" font-size="40">📄</text><text x="100" y="90" text-anchor="middle" font-family="sans-serif" font-size="13" fill="%23555" font-weight="bold">PDF allegato</text><text x="100" y="110" text-anchor="middle" font-family="sans-serif" font-size="11" fill="%23999">' + file.name + '</text></svg>';
-        } else {
-            document.getElementById('rifScontrinoImg').src = scontrinoDataUrl;
-        }
-        document.getElementById('rifScontrinoPreview').style.display = 'block';
-        document.getElementById('rifScontrinoZoneWrap').style.display = 'none';
-        document.getElementById('rifScontrinoLabel').textContent = file.name;
-    };
-    reader.readAsDataURL(file);
-}
 
-function rimuoviScontrino() {
-    scontrinoDataUrl = null;
-    document.getElementById('rifScontrinoPreview').style.display = 'none';
-    document.getElementById('rifScontrinoZoneWrap').style.display = '';
-    document.getElementById('inputScan').value = '';
-    document.getElementById('inputGallery').value = '';
-}
 
 function apriScontrino(index) {
     const rap = loadRapportino(currentDriver.targa);
@@ -2234,7 +2202,6 @@ function avviaNavi() {
 
     // Costruisce URL Google Maps con tappe sequenziali
     // Formato: daddr=tappa1+to:tappa2+to:destinazione
-    var daddr = waypoints.map(encodeURIComponent).join('+to:');
     var url = 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(waypoints[waypoints.length - 1]);
     if (waypoints.length > 1) {
         url += '&waypoints=' + waypoints.slice(0, waypoints.length - 1).map(encodeURIComponent).join('|');
