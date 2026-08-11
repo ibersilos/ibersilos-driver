@@ -1651,7 +1651,7 @@ function apriSelettorePaese(rap) {
             + '<span>' + info.nome + '</span>'
             + '</button>'
     ).join('');
-    document.getElementById('modalSostaPaese').style.display = 'flex';
+    document.getElementById('modalSostaPaese').classList.add('active');
 }
 
 function confermaPaeseSosta(codice) {
