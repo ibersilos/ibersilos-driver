@@ -391,15 +391,21 @@ function renderDocViaggio(targa) {
 
 function caricaSlot(slotId, input) {
     const file = input.files[0]; if (!file) return;
+    const targa = currentDriver.targa;
     const reader = new FileReader();
-    reader.onload = e => {
-        const targa = currentDriver.targa;
+    reader.onload = async e => {
         const docs = loadDocViaggio(targa);
-        docs[slotId] = { nome: file.name, thumb: e.target.result };
+        docs[slotId] = { nome: file.name, thumb: e.target.result, url: null };
         saveDocViaggio(targa, docs);
         renderDocViaggio(targa);
-        fbPushFase(targa); // push aggiornamento documenti
-        showToast('Documento caricato', file.name, 'success');
+        showToast('Documento caricato', 'Upload in corso...', 'success');
+        // Upload su Firebase Storage — salva URL accessibile dal DSP
+        const url = await uploadDocFirebase(file, slotId, slotId);
+        if (url) {
+            docs[slotId].url = url;
+            saveDocViaggio(targa, docs);
+        }
+        fbPushFase(targa);
     };
     reader.readAsDataURL(file);
 }
@@ -817,9 +823,11 @@ async function pushToFirebase(targa) {
     // Immagini: solo metadati (nome file, presenza/assenza)
     const docsMetadata = {};
     DOC_SLOTS.forEach(slot => {
-        docsMetadata[slot.id] = docs[slot.id] ? { nome: docs[slot.id].nome, presente: true } : { presente: false };
+        docsMetadata[slot.id] = docs[slot.id]
+            ? { nome: docs[slot.id].nome, presente: true, url: docs[slot.id].url || null }
+            : { presente: false };
     });
-    docsMetadata._extra = (docs._extra || []).map(e => ({ nome: e.nome, presente: true }));
+    docsMetadata._extra = (docs._extra || []).map(e => ({ nome: e.nome, presente: true, url: e.url || null }));
 
     const payload = {
         targa,
@@ -2238,26 +2246,6 @@ function avviaNavi() {
     window.open(url, '_blank');
 }
 
-function apriNavigatorIbersilos() {
-    var params = new URLSearchParams();
-    if (currentDriver && currentDriver.code) params.set('drvKey', currentDriver.code);
-    if (missioneCorrente) {
-        var m = missioneCorrente;
-        if (m.id) params.set('missionId', m.id);
-        // dst = indirizzo completo per geocoding HERE; dstLabel = nome leggibile per display
-        var dst      = (m.to     && m.to     !== '—') ? m.to     : '';
-        var dstLabel = (m.toNome && m.toNome !== '—') ? m.toNome : dst;
-        if (dst) {
-            params.set('dst', dst);
-            if (dstLabel && dstLabel !== dst) params.set('dstLabel', dstLabel);
-        }
-        // Anche partenza come contesto (opzionale)
-        var src = (m.fromNome && m.fromNome !== '—') ? m.fromNome : (m.from && m.from !== '—' ? m.from : '');
-        if (src) params.set('src', src);
-        if (m.rottaModalita) params.set('modalita', m.rottaModalita);
-    }
-    window.location.href = 'navigator.html?' + params.toString();
-}
 
 function tentaDeepLink(deepUrl, fallbackUrl, appName) {
     // Tenta deep link nativo; dopo 2s se l'app non risponde apre il fallback
