@@ -637,8 +637,6 @@ function aggiornaHeroMissione(m) {
         if (rottaWrap) rottaWrap.style.display = 'none';
         const fl = document.getElementById('missioneFasiLabel');
         if (fl) fl.textContent = '';
-        const nd = document.getElementById('navDest');
-        if (nd) nd.value = '';
         const eb = document.getElementById('eurowagBtn');
         if (eb) eb.style.display = 'none';
         if (typeof renderTimestamps === 'function') renderTimestamps();
@@ -663,8 +661,7 @@ function aggiornaHeroMissione(m) {
     if (fasiLbl) fasiLbl.textContent = m ? ('Missione ' + (m.id || m.numeroOrdine || '')) : '';
 
     // Auto-fill destinazione navigazione dalla missione
-    const navDestEl = document.getElementById('navDest');
-    if (navDestEl) navDestEl.value = m ? (m.to || m.destinazione || '') : '';
+
 
     // Aggiorna card percorso
     aggiornaPercorsoCard(m);
@@ -1456,8 +1453,6 @@ function eliminaTratta(index) {
 }
 
 // ====== RIFORNIMENTI ======
-let scontrinoDataUrl = null;
-
 function apriModalRif() {
     document.getElementById('rifTipo').value = '';
     document.getElementById('rifLitri').value = '';
@@ -1465,11 +1460,6 @@ function apriModalRif() {
     document.querySelectorAll('#btn-gasolio, #btn-adblue').forEach(b => b.classList.remove('selected'));
     document.getElementById('rifTotaleBox').style.display = 'none';
     document.getElementById('rifTotaleVal').textContent = '€ 0.00';
-    scontrinoDataUrl = null;
-    document.getElementById('rifScontrinoPreview').style.display = 'none';
-    document.getElementById('rifScontrinoZoneWrap').style.display = '';
-    document.getElementById('inputScan').value = '';
-    document.getElementById('inputGallery').value = '';
     document.getElementById('modalRif').classList.add('active');
 }
 
@@ -1517,25 +1507,14 @@ function salvaRifornimento() {
     if (!tipo) { showToast('Seleziona il tipo di carburante', '', 'warning'); return; }
     if (!litri || litri <= 0) { showToast('Inserisci i litri', '', 'warning'); return; }
     if (!prezzo || prezzo <= 0) { showToast('Inserisci il prezzo per litro', '', 'warning'); return; }
-    if (false && !scontrinoDataUrl) {
-        showToast('Scan obbligatorio', 'Scansiona lo scontrino prima di salvare', 'error');
-        const wrap = document.getElementById('rifScontrinoZoneWrap');
-        wrap.style.outline = '2px solid var(--red)';
-        wrap.style.borderRadius = '14px';
-        setTimeout(() => { wrap.style.outline = ''; }, 2200);
-        return;
-    }
-
     const totale = (litri * prezzo).toFixed(2);
     const rap = loadRapportino(currentDriver.targa);
     if (!rap.rifornimenti) rap.rifornimenti = [];
     rap.rifornimenti.push({
         tipo, litri: litri.toFixed(1), prezzo: prezzo.toFixed(3), totale,
-        scontrinoThumb: scontrinoDataUrl,
         ora: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
     });
     saveRapportino(rap);
-    scontrinoDataUrl = null;
     chiudiModal('modalRif');
     renderRapportino(rap);
     showToast('Rifornimento salvato', `${tipo} · ${litri.toFixed(1)} L · € ${totale}`, 'success');
@@ -2192,9 +2171,6 @@ function avviaNavi() {
         if (missioneCorrente.from) waypoints.push(missioneCorrente.from);
         if (missioneCorrente.to)   waypoints.push(missioneCorrente.to);
     }
-    var dest = (document.getElementById('navDest') || {}).value || '';
-    if (!waypoints.length && dest) waypoints.push(dest);
-
     if (!waypoints.length) {
         window.open('https://maps.google.com', '_blank');
         return;
