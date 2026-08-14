@@ -1560,6 +1560,21 @@ const PAESI_INFO = {
     'LU': { nome: 'Lussemburgo', flag: '🇱🇺' },
 };
 
+function segnaFerie() {
+    if (!confirm('Segnare questo giorno come ferie?')) return;
+    const targa = currentDriver.targa;
+    const rap = loadRapportino(targa);
+    rap.ferie = true;
+    rap.chiuso = true;
+    rap.kmGiorno = 0;
+    rap.oreGuida = 0;
+    rap.sostaNotturna = { paese: '—', codice: '??', flag: '', cap: '', citta: '' };
+    saveRapportino(rap);
+    renderRapportino(rap);
+    renderStoricoRapportini(targa);
+    showToast('Ferie registrate', rap.data, 'success');
+}
+
 function chiudiSoloTrasferta() {
     const ore = parseFloat(document.getElementById('rapOreGuida').value) || 0;
     if (!confirm('Chiudere il rapportino come giornata di sola trasferta?')) return;
@@ -1716,7 +1731,7 @@ function renderStoricoRapportini(targa) {
                 <div>
                     <div style="font-weight:700;font-size:0.88rem;">${data}</div>
                     <div style="font-size:0.75rem;color:var(--text-dim);margin-top:3px;">
-                        <strong style="color:var(--red)">${r.kmGiorno || r.kmTotali || 0} km</strong> · ${r.oreGuida || 0} ore guida${r.soloTrasferta ? ' · <em>trasferta</em>' : ''}
+                        ${r.ferie ? '<strong style="color:#1565c0">Ferie</strong>' : `<strong style="color:var(--red)">${r.kmGiorno || r.kmTotali || 0} km</strong> · ${r.oreGuida || 0} ore guida${r.soloTrasferta ? ' · <em>trasferta</em>' : ''}`}
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
