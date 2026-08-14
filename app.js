@@ -1570,6 +1570,12 @@ function segnaFerie() {
     rap.oreGuida = 0;
     rap.sostaNotturna = { paese: '—', codice: '??', flag: '', cap: '', citta: '' };
     saveRapportino(rap);
+    const storicoKeyF = rapStoricoKey(targa);
+    const storicoF = JSON.parse(localStorage.getItem(storicoKeyF) || '[]');
+    storicoF.unshift(rap);
+    localStorage.setItem(storicoKeyF, JSON.stringify(storicoF.slice(0, 90)));
+    pushRapportinoFirebase(rap);
+    renderCalendarioRapportino(targa);
     renderRapportino(rap);
     renderStoricoRapportini(targa);
     showToast('Ferie registrate', rap.data, 'success');
@@ -1698,11 +1704,14 @@ async function finalizzaRapportino(rap, lat, lng, sostaPreimpostata) {
     rap.oraChiusura = new Date().toISOString();
     saveRapportino(rap);
 
-    // Archivia in storico
+    // Archivia in storico locale
     const storicoKey = rapStoricoKey(currentDriver.targa);
     const storico = JSON.parse(localStorage.getItem(storicoKey) || '[]');
     storico.unshift(rap);
     localStorage.setItem(storicoKey, JSON.stringify(storico.slice(0, 90)));
+
+    // Sync su Firebase — accessibile dal dispatcher
+    pushRapportinoFirebase(rap);
 
     renderCalendarioRapportino(currentDriver.targa);
     renderRapportino(rap);
@@ -1710,6 +1719,97 @@ async function finalizzaRapportino(rap, lat, lng, sostaPreimpostata) {
 
     const isEstero = sostaNotturna.codice !== 'IT' && sostaNotturna.codice !== '??';
     showToast('Rapportino chiuso!', `${sostaNotturna.flag} ${sostaNotturna.paese} · ${isEstero ? 'Trasferta Estero' : 'Lavoro Italia'}`, 'success');
+}
+
+async function pushRapportinoFirebase(rap) {
+    if (!window._fbReady || !window._fb) return;
+    try {
+        const { db, ref, set } = window._fb;
+        // Rimuovi thumb base64 prima del push — solo metadati rifornimenti
+        const rapClean = { ...rap, rifornimenti: (rap.rifornimenti || []).map(r => ({ tipo: r.tipo, litri: r.litri, prezzo: r.prezzo, totale: r.totale, ora: r.ora })) };
+        const dateKey = rap.data.replace(/-/g, '_');
+        await set(ref(db, 'rapportini/' + rap.targa + '/' + dateKey), rapClean);
+    } catch(e) {
+        console.warn('[pushRapportino]', e);
+    }
+}
+
+function esportaRapportiniPDF() {
+    if (!currentDriver) return;
+    if (typeof window.jspdf === 'undefined') { showToast('PDF', 'Libreria non caricata', 'error'); return; }
+    const { jsPDF } = window.jspdf;
+    const targa = currentDriver.targa;
+    const storico = JSON.parse(localStorage.getItem(rapStoricoKey(targa)) || '[]');
+    if (!storico.length) { showToast('Nessun rapportino', 'Nessun dato da esportare', 'warning'); return; }
+
+    // Raggruppa per mese — esporta il mese più recente
+    const mesePiu = storico[0].data.substring(0, 7);
+    const righe = storico.filter(r => r.data.startsWith(mesePiu));
+    const [anno, mese] = mesePiu.split('-');
+    const MESI = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const W = 210, M = 14;
+    let y = 18;
+
+    // Intestazione
+    doc.setFillColor(227, 6, 19);
+    doc.rect(0, 0, W, 26, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('IBERSILOS SLU — Rapportino Mensile', M, 11);
+    doc.setFontSize(10);
+    doc.text(`${currentDriver.nome} · ${targa} · ${MESI[parseInt(mese)]} ${anno}`, M, 19);
+    y = 34;
+
+    // Riepilogo mese
+    const totKm = righe.reduce((s, r) => s + (r.kmGiorno || 0), 0);
+    const totOre = righe.reduce((s, r) => s + (r.oreGuida || 0), 0);
+    const totRif = righe.reduce((s, r) => s + (r.rifornimenti || []).reduce((a, rf) => a + parseFloat(rf.totale || 0), 0), 0);
+    const giorniFerie = righe.filter(r => r.ferie).length;
+    const giorniTrasferta = righe.filter(r => r.soloTrasferta).length;
+
+    doc.setTextColor(30, 30, 30);
+    doc.setFillColor(245, 245, 245);
+    doc.rect(M, y, W - M * 2, 18, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+    doc.text(`KM totali: ${totKm}`, M + 4, y + 6);
+    doc.text(`Ore guida: ${totOre.toFixed(1)}`, M + 50, y + 6);
+    doc.text(`Rifornimenti: € ${totRif.toFixed(2)}`, M + 100, y + 6);
+    doc.text(`Ferie: ${giorniFerie}g  |  Trasferta: ${giorniTrasferta}g  |  Giorni: ${righe.length}`, M + 4, y + 13);
+    y += 24;
+
+    // Righe giornaliere
+    righe.sort((a, b) => a.data.localeCompare(b.data)).forEach(r => {
+        if (y > 270) { doc.addPage(); y = 14; }
+        const dataLabel = new Date(r.data + 'T12:00:00').toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit' });
+        const tipo = r.ferie ? 'FERIE' : r.soloTrasferta ? 'TRASFERTA' : 'LAVORO';
+        const sosta = r.sostaNotturna ? `${r.sostaNotturna.paese}` : '—';
+        const rif = (r.rifornimenti || []).map(rf => `${rf.tipo} ${rf.litri}L €${rf.totale}`).join(', ') || '—';
+
+        doc.setFillColor(r.ferie ? 232 : r.soloTrasferta ? 255 : 255, r.ferie ? 244 : r.soloTrasferta ? 248 : 255, r.ferie ? 253 : r.soloTrasferta ? 225 : 255);
+        doc.rect(M, y, W - M * 2, 16, 'F');
+        doc.setDrawColor(220, 220, 220);
+        doc.rect(M, y, W - M * 2, 16, 'S');
+
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(30, 30, 30);
+        doc.text(dataLabel, M + 3, y + 5);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+        doc.text(tipo, M + 28, y + 5);
+        doc.text(`${r.kmGiorno || 0} km · ${r.oreGuida || 0}h`, M + 3, y + 11);
+        doc.text(`Sosta: ${sosta}`, M + 50, y + 5);
+        doc.text(`Rif: ${rif}`, M + 50, y + 11);
+        if (r.note) { doc.setTextColor(120, 120, 120); doc.text(r.note.substring(0, 60), M + 3, y + 14.5); }
+        doc.setTextColor(30, 30, 30);
+        y += 18;
+    });
+
+    // Footer
+    doc.setFontSize(7); doc.setTextColor(150, 150, 150);
+    doc.text(`Generato il ${new Date().toLocaleDateString('it-IT')} — Ibersilos SLU`, M, 290);
+
+    doc.save(`rapportino_${targa}_${mesePiu}.pdf`);
 }
 
 function renderStoricoRapportini(targa) {
