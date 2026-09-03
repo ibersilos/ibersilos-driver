@@ -550,6 +550,9 @@ function initFirebase(targa) {
 
     // Chat listener — inizializzato qui perché Firebase è garantito pronto
     initChatDriver();
+
+    // Recupero una tantum dei rapportini chiusi rimasti solo in locale
+    resyncStoricoRapportini(targa);
 }
 
 
@@ -1731,6 +1734,51 @@ async function pushRapportinoFirebase(rap) {
         await set(ref(db, 'rapportini/' + rap.targa + '/' + dateKey), rapClean);
     } catch(e) {
         console.warn('[pushRapportino]', e);
+    }
+}
+
+// Recupero pregresso: i rapportini chiusi PRIMA che il nodo /rapportini avesse
+// una regola di scrittura su Firebase erano rimasti solo in localStorage.
+// Questa funzione, all'avvio, li carica su Firebase SOLO SE la chiave non esiste
+// già (get prima di set) → non può sovrascrivere né modificare dati esistenti,
+// può solo colmare i buchi. Idempotente: una chiave inviata viene marcata e
+// saltata alle sessioni successive.
+async function resyncStoricoRapportini(targa) {
+    if (!window._fbReady || !window._fb || !targa) return;
+    const { db, ref, set, get } = window._fb;
+    let storico;
+    try { storico = JSON.parse(localStorage.getItem(rapStoricoKey(targa)) || '[]'); }
+    catch(e) { return; }
+    if (!Array.isArray(storico) || !storico.length) return;
+
+    const syncKey = 'ibs_rap_synced_' + targa;
+    let done;
+    try { done = new Set(JSON.parse(localStorage.getItem(syncKey) || '[]')); }
+    catch(e) { done = new Set(); }
+
+    let pushed = 0;
+    for (const rap of storico) {
+        if (!rap || !rap.data || !/^\d{4}-\d{2}-\d{2}/.test(rap.data)) continue;
+        const t = rap.targa || targa;
+        const dateKey = String(rap.data).slice(0, 10).replace(/-/g, '_');
+        const mark = t + '/' + dateKey;
+        if (done.has(mark)) continue;
+        try {
+            const snap = await get(ref(db, 'rapportini/' + t + '/' + dateKey));
+            if (!snap.exists()) {
+                const rapClean = { ...rap, targa: t, rifornimenti: (rap.rifornimenti || []).map(r => ({ tipo: r.tipo, litri: r.litri, prezzo: r.prezzo, totale: r.totale, ora: r.ora })) };
+                await set(ref(db, 'rapportini/' + t + '/' + dateKey), rapClean);
+                pushed++;
+            }
+            done.add(mark); // esiste già o appena creato → non ritentare
+        } catch(e) {
+            console.warn('[resyncStorico]', mark, e && e.message);
+        }
+    }
+    try { localStorage.setItem(syncKey, JSON.stringify([...done])); } catch(e) {}
+    if (pushed > 0) {
+        console.log('[resyncStorico] ' + pushed + ' rapportini pregressi caricati su Firebase');
+        if (typeof showToast === 'function') showToast('Rapportini sincronizzati', pushed + ' inviati al dispatcher', 'success');
     }
 }
 
