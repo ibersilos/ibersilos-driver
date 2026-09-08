@@ -301,12 +301,12 @@
             box-shadow: 0 4px 16px rgba(227,6,19,0.25);
         }
         .missione-id { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; opacity: 0.85; margin-bottom: 6px; }
-        .missione-rotta { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
-        .missione-citta { flex: 1; }
+        .missione-rotta { display: flex; flex-direction: column; align-items: stretch; gap: 6px; margin: 12px 0; }
+        .missione-citta { min-width: 0; }
         .missione-citta-label { font-size: 0.7rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; }
-        .missione-citta-nome { font-size: 1.4rem; font-weight: 800; }
-        .missione-freccia { width: 40px; height: 2px; background: var(--yellow); position: relative; flex-shrink: 0; }
-        .missione-freccia::after { content: '▶'; position: absolute; right: -8px; top: -7px; font-size: 0.7rem; color: var(--yellow); }
+        .missione-citta-nome { font-size: 1.3rem; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+        .missione-freccia { width: 2px; height: 16px; background: var(--yellow); position: relative; flex-shrink: 0; margin-left: 5px; }
+        .missione-freccia::after { content: '▼'; position: absolute; left: -5px; bottom: -8px; font-size: 0.7rem; color: var(--yellow); }
         .missione-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
         .missione-stat { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 10px 6px; text-align: center; }
         .missione-stat-val { font-size: 1.2rem; font-weight: 800; }
@@ -667,7 +667,7 @@
                             <div class="missione-citta-nome" id="missioneDa">—</div>
                         </div>
                         <div class="missione-freccia"></div>
-                        <div class="missione-citta" style="text-align:right">
+                        <div class="missione-citta">
                             <div class="missione-citta-label">Arrivo</div>
                             <div class="missione-citta-nome" id="missioneA">—</div>
                         </div>
