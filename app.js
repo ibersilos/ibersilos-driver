@@ -551,8 +551,9 @@ function initFirebase(targa) {
     // Chat listener — inizializzato qui perché Firebase è garantito pronto
     initChatDriver();
 
-    // Recupero una tantum dei rapportini chiusi rimasti solo in locale
-    resyncStoricoRapportini(targa);
+    // Rapportini: prima colma i buchi locale→Firebase, poi ripristina lo storico
+    // Firebase→locale (necessario su un device nuovo dove il localStorage è vuoto)
+    Promise.resolve(resyncStoricoRapportini(targa)).finally(() => pullStoricoRapportini(targa));
 }
 
 
@@ -1097,24 +1098,7 @@ function avviaAppFull(driver) {
     document.getElementById('footerNome').textContent = driver.nome;
     document.getElementById('currentDate').textContent = new Date().toLocaleDateString('it-IT', { weekday:'short', day:'2-digit', month:'short' });
     // Calcola giorni di presenza reali dal mese corrente
-    (function() {
-        const targa = driver.targa;
-        const meseCurr = new Date().toISOString().slice(0, 7); // YYYY-MM
-        let giorniPresenti = 0;
-        // Conta dai rapportini chiusi (storico)
-        try {
-            const storico = JSON.parse(localStorage.getItem('ibs_rap_storico_' + targa) || '[]');
-            const setGiorni = new Set();
-            storico.forEach(r => { if (r.data && r.data.startsWith(meseCurr) && r.chiuso) setGiorni.add(r.data); });
-            giorniPresenti = setGiorni.size;
-        } catch(e) {}
-        // Aggiungi oggi se c'è un rapportino aperto
-        try {
-            const rap = JSON.parse(localStorage.getItem('ibs_rap_' + targa));
-            if (rap && rap.data && rap.data.startsWith(meseCurr)) giorniPresenti = Math.max(giorniPresenti, 1);
-        } catch(e) {}
-        document.getElementById('giorniPresenza').textContent = giorniPresenti || 0;
-    })();
+    aggiornaGiorniPresenza(driver.targa);
     document.getElementById('chatDot').style.display = 'block';
     renderDocumenti(driver.targa);
     renderTimestamps();
@@ -1159,6 +1143,25 @@ document.addEventListener('DOMContentLoaded', () => {
 // ====== RAPPORTINO GIORNALIERO ======
 function rapKey(targa) { return 'ibs_rap_' + targa; }
 function rapStoricoKey(targa) { return 'ibs_rap_storico_' + targa; }
+
+// Giorni di presenza del mese corrente — dai rapportini chiusi in storico + oggi se aperto
+function aggiornaGiorniPresenza(targa) {
+    const el = document.getElementById('giorniPresenza');
+    if (!el || !targa) return;
+    const meseCurr = new Date().toISOString().slice(0, 7); // YYYY-MM
+    let giorniPresenti = 0;
+    try {
+        const storico = JSON.parse(localStorage.getItem(rapStoricoKey(targa)) || '[]');
+        const setGiorni = new Set();
+        storico.forEach(r => { if (r.data && r.data.startsWith(meseCurr) && r.chiuso) setGiorni.add(r.data); });
+        giorniPresenti = setGiorni.size;
+    } catch(e) {}
+    try {
+        const rap = JSON.parse(localStorage.getItem('ibs_rap_' + targa));
+        if (rap && rap.data && rap.data.startsWith(meseCurr)) giorniPresenti = Math.max(giorniPresenti, 1);
+    } catch(e) {}
+    el.textContent = giorniPresenti || 0;
+}
 
 let selectedRapDate = '';
 let calAnno = new Date().getFullYear();
@@ -1779,6 +1782,41 @@ async function resyncStoricoRapportini(targa) {
     if (pushed > 0) {
         console.log('[resyncStorico] ' + pushed + ' rapportini pregressi caricati su Firebase');
         if (typeof showToast === 'function') showToast('Rapportini sincronizzati', pushed + ' inviati al dispatcher', 'success');
+    }
+}
+
+// Ripristino storico da Firebase: su un device nuovo il localStorage è vuoto ma
+// /rapportini/<targa> contiene lo storico completo. Merge per data — Firebase è
+// fonte di verità, le voci solo-locali non ancora sincronizzate restano.
+async function pullStoricoRapportini(targa) {
+    if (!window._fbReady || !window._fb || !targa) return;
+    try {
+        const { db, ref, get } = window._fb;
+        const snap = await get(ref(db, 'rapportini/' + targa));
+        if (!snap.exists()) return;
+        const remote = snap.val() || {};
+
+        const key = rapStoricoKey(targa);
+        let locale = [];
+        try { locale = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+        if (!Array.isArray(locale)) locale = [];
+
+        const byData = {};
+        locale.forEach(r => { if (r && r.data) byData[String(r.data).slice(0, 10)] = r; });
+        Object.values(remote).forEach(r => { if (r && r.data) byData[String(r.data).slice(0, 10)] = r; });
+
+        const merged = Object.values(byData)
+            .filter(r => r && /^\d{4}-\d{2}-\d{2}/.test(r.data))
+            .sort((a, b) => String(b.data).localeCompare(String(a.data)))
+            .slice(0, 90);
+
+        localStorage.setItem(key, JSON.stringify(merged));
+        if (currentDriver && currentDriver.targa === targa) {
+            renderStoricoRapportini(targa);
+            aggiornaGiorniPresenza(targa);
+        }
+    } catch(e) {
+        console.warn('[pullStoricoRapportini]', e && e.message);
     }
 }
 
