@@ -1,4 +1,4 @@
-const CACHE = 'ibersilos-drv-v6';
+const CACHE = 'ibersilos-drv-v7';
 const STATIC = ['/ibersilos-driver/logo.jpg'];
 
 self.addEventListener('install', e => {
