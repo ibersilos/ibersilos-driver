@@ -832,6 +832,11 @@ async function pushToFirebase(targa) {
 
     const payload = {
         targa,
+        // missionId: senza questo campo il set() sotto sovrascrive l'intero nodo
+        // e cancella il collegamento missione scritto dal dispatcher
+        // (pushViaggioDriver) — il DSP smette di mostrare le fasi live perché
+        // il suo check `lv.missionId === m.id` fallisce silenziosamente.
+        missionId: missioneCorrente ? String(missioneCorrente.id) : null,
         autista: driver.nome,
         code: driver.code,
         aggiornato: new Date().toISOString(),
