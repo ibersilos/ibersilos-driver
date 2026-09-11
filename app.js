@@ -4,14 +4,12 @@ var firebaseConfig = {
         authDomain: "ibersilos-c6053.firebaseapp.com",
         databaseURL: "https://ibersilos-c6053-default-rtdb.europe-west1.firebasedatabase.app",
         projectId: "ibersilos-c6053",
-        storageBucket: "ibersilos-c6053.firebasestorage.app",
         messagingSenderId: "1073852027153",
         appId: "1:1073852027153:web:11324e69d53dd5523bbcb0",
         measurementId: "G-PG1YGDDLTW"
       };
       firebase.initializeApp(firebaseConfig);
       var _db      = firebase.database();
-      var _storage = firebase.storage();
       var _auth;
       try { _auth = firebase.auth(); } catch(e) { _auth = null; }
 
@@ -28,12 +26,8 @@ var firebaseConfig = {
         },
         push:    function(ref, val) { return ref.push(val); }
       };
-      window._fbStorage = {
-        storage:        _storage,
-        sRef:           function(storage, path) { return _storage.ref(path); },
-        uploadBytes:    function(ref, blob) { return ref.put(blob); },
-        getDownloadURL: function(ref) { return ref.getDownloadURL(); }
-      };
+      // Documenti viaggio: Cloudflare Worker + R2 (vedi dispatcher/worker/README.md)
+      // al posto di Firebase Storage — mai attivato sul progetto (Blaze a pagamento).
       // Autenticazione anonima — prerequisito per Firebase Rules
       // Usa then(ok,err) invece di finally() per compatibilità Android WebView
       function _fbDispatchReady() {
@@ -50,6 +44,31 @@ var firebaseConfig = {
 
 // ====== GLOBALS (shared across both script blocks) ======
 var missioneCorrente = null;  // dichiarata qui, usata da tsKey() e da initFirebase()
+
+// ── Docs Worker (Cloudflare Worker + R2) — documenti viaggio + archivio ──
+// Sostituisce Firebase Storage (mai attivato, Blaze a pagamento). Vedi
+// dispatcher/worker/README.md. Stesso worker/token del dispatcher.
+const DOCS_WORKER_URL   = 'https://ibersilos-docs.ibersilos.workers.dev';
+const DOCS_WORKER_TOKEN = 'e2f163de0279dfe2b5d7a19c1cbef2613f17ffab4deb70b5';
+
+async function uploadDocsWorker(id, blob, contentType) {
+    try {
+        const buf = await blob.arrayBuffer();
+        let binary = '';
+        const bytes = new Uint8Array(buf);
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        const base64 = btoa(binary);
+        const resp = await fetch(DOCS_WORKER_URL + '/f', {
+            method: 'POST',
+            body: JSON.stringify({ id, base64, contentType, token: DOCS_WORKER_TOKEN }),
+        });
+        const j = await resp.json();
+        return j && j.ok ? j.url : null;
+    } catch (e) {
+        console.warn('[DocsWorker] upload fallito:', e && e.message);
+        return null;
+    }
+}
 
 // ====== DRIVERS ======
 const demoDrivers = {
@@ -890,20 +909,19 @@ async function chiudiViaggio() {
     // Push stato viaggio al Realtime DB
     const sent = await pushToFirebase(targa);
 
-    // ── Archiviazione Firebase Storage (best-effort, non bloccante) ──
-    if (window._fbStorage && missioneCorrente) {
+    // ── Archiviazione su Docs Worker/R2 (best-effort, non bloccante) ──
+    if (missioneCorrente) {
         const _storageUpload = async () => {
-            const { storage, sRef, uploadBytes } = window._fbStorage;
             const ts_data   = loadTimestamps(targa);
             const docs_data = loadDocViaggio(targa);
             const missionId = (missioneCorrente.id || missioneCorrente.numeroOrdine || Date.now()).toString().replace(/[^a-zA-Z0-9_-]/g,'_');
             const payload   = { missionId, targa, autista: currentDriver.nome, chiusoAt: new Date().toISOString(), missione: missioneCorrente, timestamps: ts_data, documenti: docs_data };
             const blob      = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
             const path      = 'archivio/' + targa + '/' + missionId + '/viaggio.json';
-            await uploadBytes(sRef(storage, path), blob);
+            await uploadDocsWorker(path, blob, 'application/json');
         };
         // Fire-and-forget: non blocca la chiusura
-        _storageUpload().catch(e => console.warn('[Archivio] Storage non disponibile (file://):', e.message));
+        _storageUpload().catch(e => console.warn('[Archivio] Docs Worker non disponibile:', e.message));
     }
 
     // ── Aggiorna status missione nel dispatcher ──────────────────────
@@ -966,17 +984,15 @@ function docsKey(targa) { return 'ibs_docs_' + targa; }
 
 // Alias: scanner module usa saveDocs/loadDocs
 
-// Firebase Storage upload per documenti viaggio
+// Upload documenti viaggio su Docs Worker (Cloudflare R2)
 async function uploadDocFirebase(file, docId, tipo) {
-    if (!window._fbStorage || !currentDriver) return null;
+    if (!currentDriver) return null;
     try {
-        const { storage, sRef, uploadBytes, getDownloadURL } = window._fbStorage;
         const targa  = currentDriver.targa;
         const mId    = (missioneCorrente && missioneCorrente.id) ? missioneCorrente.id.replace(/[^a-zA-Z0-9_-]/g,'_') : 'misc';
         const ext    = (file.name || 'file').split('.').pop() || 'bin';
         const path   = 'docs/' + targa + '/' + mId + '/' + tipo + '_' + docId + '_' + Date.now() + '.' + ext;
-        const snap   = await uploadBytes(sRef(storage, path), file);
-        return await getDownloadURL(snap.ref);
+        return await uploadDocsWorker(path, file, file.type || 'application/octet-stream');
     } catch(e) {
         console.warn('[uploadDocFirebase]', e);
         return null;
