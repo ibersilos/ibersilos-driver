@@ -45,27 +45,40 @@ var firebaseConfig = {
 // ====== GLOBALS (shared across both script blocks) ======
 var missioneCorrente = null;  // dichiarata qui, usata da tsKey() e da initFirebase()
 
-// ── Docs Worker (Cloudflare Worker + R2) — documenti viaggio + archivio ──
-// Sostituisce Firebase Storage (mai attivato, Blaze a pagamento). Vedi
-// dispatcher/worker/README.md. Stesso worker/token del dispatcher.
-const DOCS_WORKER_URL   = 'https://ibersilos-docs.ibersilos.workers.dev';
-const DOCS_WORKER_TOKEN = 'e2f163de0279dfe2b5d7a19c1cbef2613f17ffab4deb70b5';
+// ── Documenti viaggio → cartella Drive della missione ──
+// Stesso Apps Script/token del dispatcher, stessa cartella (06_DISPATCHER/
+// MISSIONI/<anno>/<mese>/<numeroOrdine o id>/) dove finiscono ODC/CMR/DeCA —
+// una missione completata deve avere tutto in un unico posto per i controlli.
+const APPS_SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycbyuGAUQRSnhJae6pi79NOnizch1g9kB91pP9ffqf2pZDBQQrgVB5kl2n_0r7v5bRZs3/exec';
+const APPS_SCRIPT_TOKEN = 'IBS2026DISP';
 
-async function uploadDocsWorker(id, blob, contentType) {
+async function uploadDocToDrive(file, tipo, missionId) {
     try {
-        const buf = await blob.arrayBuffer();
-        let binary = '';
+        const buf = await file.arrayBuffer();
         const bytes = new Uint8Array(buf);
-        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        let binary = '';
+        const chunk = 8192;
+        for (let i = 0; i < bytes.length; i += chunk) {
+            binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+        }
         const base64 = btoa(binary);
-        const resp = await fetch(DOCS_WORKER_URL + '/f', {
-            method: 'POST',
-            body: JSON.stringify({ id, base64, contentType, token: DOCS_WORKER_TOKEN }),
-        });
+        const ext  = (file.name || tipo || 'jpg').split('.').pop() || 'jpg';
+        const nome = tipo + '.' + ext;
+        const payload = {
+            action:    'salvaDoc',
+            token:     APPS_SCRIPT_TOKEN,
+            base64:    base64,
+            mime:      file.type || 'application/octet-stream',
+            nome:      nome,
+            tipo:      tipo,
+            missionId: String(missionId || '').replace(/[^A-Za-z0-9\-_]/g, '_'),
+            ts:        new Date().toISOString(),
+        };
+        const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
         const j = await resp.json();
         return j && j.ok ? j.url : null;
     } catch (e) {
-        console.warn('[DocsWorker] upload fallito:', e && e.message);
+        console.warn('[uploadDocToDrive] fallito:', e && e.message);
         return null;
     }
 }
@@ -909,20 +922,9 @@ async function chiudiViaggio() {
     // Push stato viaggio al Realtime DB
     const sent = await pushToFirebase(targa);
 
-    // ── Archiviazione su Docs Worker/R2 (best-effort, non bloccante) ──
-    if (missioneCorrente) {
-        const _storageUpload = async () => {
-            const ts_data   = loadTimestamps(targa);
-            const docs_data = loadDocViaggio(targa);
-            const missionId = (missioneCorrente.id || missioneCorrente.numeroOrdine || Date.now()).toString().replace(/[^a-zA-Z0-9_-]/g,'_');
-            const payload   = { missionId, targa, autista: currentDriver.nome, chiusoAt: new Date().toISOString(), missione: missioneCorrente, timestamps: ts_data, documenti: docs_data };
-            const blob      = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-            const path      = 'archivio/' + targa + '/' + missionId + '/viaggio.json';
-            await uploadDocsWorker(path, blob, 'application/json');
-        };
-        // Fire-and-forget: non blocca la chiusura
-        _storageUpload().catch(e => console.warn('[Archivio] Docs Worker non disponibile:', e.message));
-    }
+    // Nota: lo snapshot fasi/timestamps di fine viaggio non viene più
+    // archiviato a parte — i timestamp restano solo su Firebase (viaggi_sv),
+    // non servono nella cartella Drive della missione.
 
     // ── Aggiorna status missione nel dispatcher ──────────────────────
     if (missioneCorrente && window._fb) {
@@ -987,12 +989,10 @@ function docsKey(targa) { return 'ibs_docs_' + targa; }
 // Upload documenti viaggio su Docs Worker (Cloudflare R2)
 async function uploadDocFirebase(file, docId, tipo) {
     if (!currentDriver) return null;
+    if (!missioneCorrente) { console.warn('[uploadDocFirebase] nessuna missione attiva'); return null; }
     try {
-        const targa  = currentDriver.targa;
-        const mId    = (missioneCorrente && missioneCorrente.id) ? missioneCorrente.id.replace(/[^a-zA-Z0-9_-]/g,'_') : 'misc';
-        const ext    = (file.name || 'file').split('.').pop() || 'bin';
-        const path   = 'docs/' + targa + '/' + mId + '/' + tipo + '_' + docId + '_' + Date.now() + '.' + ext;
-        return await uploadDocsWorker(path, file, file.type || 'application/octet-stream');
+        const missionId = missioneCorrente.numeroOrdine || missioneCorrente.id;
+        return await uploadDocToDrive(file, tipo + '_autista', missionId);
     } catch(e) {
         console.warn('[uploadDocFirebase]', e);
         return null;
