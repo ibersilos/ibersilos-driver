@@ -1488,6 +1488,8 @@ function eliminaTratta(index) {
 }
 
 // ====== RIFORNIMENTI ======
+let _rifScontrino = null; // { file, thumb } — in attesa di salvaRifornimento()
+
 function apriModalRif() {
     document.getElementById('rifTipo').value = '';
     document.getElementById('rifLitri').value = '';
@@ -1495,7 +1497,21 @@ function apriModalRif() {
     document.querySelectorAll('#btn-gasolio, #btn-adblue').forEach(b => b.classList.remove('selected'));
     document.getElementById('rifTotaleBox').style.display = 'none';
     document.getElementById('rifTotaleVal').textContent = '€ 0.00';
+    _rifScontrino = null;
+    document.getElementById('rifScontrinoPreview').style.display = 'none';
+    document.getElementById('rifScontrinoGal').value = '';
     document.getElementById('modalRif').classList.add('active');
+}
+
+function caricaRifScontrino(input) {
+    const file = input.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        _rifScontrino = { file, thumb: e.target.result };
+        document.getElementById('rifScontrinoImg').src = e.target.result;
+        document.getElementById('rifScontrinoPreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
 }
 
 function selezionaCarburante(tipo) {
@@ -1528,13 +1544,14 @@ function calcolaImporto() {
 function apriScontrino(index) {
     const rap = loadRapportino(currentDriver.targa);
     const r = (rap.rifornimenti || [])[index];
-    if (!r || !r.scontrinoThumb) return;
+    if (!r || (!r.scontrinoThumb && !r.scontrinoUrl)) return;
+    if (r.scontrinoUrl) { window.open(r.scontrinoUrl, '_blank'); return; }
     const w = window.open('', '_blank');
     w.document.write('<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="' + (r.scontrinoThumb||'') + '" style="max-width:100%;max-height:100vh;"><\/body><\/html>');
     w.document.close();
 }
 
-function salvaRifornimento() {
+async function salvaRifornimento() {
     const tipo = document.getElementById('rifTipo').value;
     const litri = parseFloat(document.getElementById('rifLitri').value);
     const prezzo = parseFloat(document.getElementById('rifPrezzo').value);
@@ -1543,16 +1560,36 @@ function salvaRifornimento() {
     if (!litri || litri <= 0) { showToast('Inserisci i litri', '', 'warning'); return; }
     if (!prezzo || prezzo <= 0) { showToast('Inserisci il prezzo per litro', '', 'warning'); return; }
     const totale = (litri * prezzo).toFixed(2);
-    const rap = loadRapportino(currentDriver.targa);
+    const targa = currentDriver.targa;
+    const rap = loadRapportino(targa);
     if (!rap.rifornimenti) rap.rifornimenti = [];
-    rap.rifornimenti.push({
+    const scontrino = _rifScontrino;
+    const idx = rap.rifornimenti.push({
         tipo, litri: litri.toFixed(1), prezzo: prezzo.toFixed(3), totale,
-        ora: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-    });
+        ora: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+        scontrinoThumb: scontrino ? scontrino.thumb : null,
+        scontrinoUrl: null,
+    }) - 1;
     saveRapportino(rap);
     chiudiModal('modalRif');
     renderRapportino(rap);
     showToast('Rifornimento salvato', `${tipo} · ${litri.toFixed(1)} L · € ${totale}`, 'success');
+    pushRapportinoFirebase(rap);
+
+    // Upload scontrino su Drive in background — non blocca il salvataggio
+    if (scontrino && scontrino.file) {
+        const missionId = missioneCorrente ? missioneCorrente.id : (targa + '_' + rap.data);
+        const url = await uploadDocToDrive(scontrino.file, 'scontrino_' + tipo.toLowerCase(), missionId);
+        if (url) {
+            const rapNow = loadRapportino(targa);
+            if (rapNow.rifornimenti && rapNow.rifornimenti[idx]) {
+                rapNow.rifornimenti[idx].scontrinoUrl = url;
+                saveRapportino(rapNow);
+                renderRapportino(rapNow);
+                pushRapportinoFirebase(rapNow);
+            }
+        }
+    }
 }
 
 function eliminaRifornimento(index) {
@@ -1760,8 +1797,9 @@ async function pushRapportinoFirebase(rap) {
     if (!window._fbReady || !window._fb) return;
     try {
         const { db, ref, set } = window._fb;
-        // Rimuovi thumb base64 prima del push — solo metadati rifornimenti
-        const rapClean = { ...rap, rifornimenti: (rap.rifornimenti || []).map(r => ({ tipo: r.tipo, litri: r.litri, prezzo: r.prezzo, totale: r.totale, ora: r.ora })) };
+        // Rimuovi thumb base64 prima del push (troppo pesante per RTDB) — l'URL
+        // Drive dello scontrino, se già caricato, resta: è una stringa leggera.
+        const rapClean = { ...rap, rifornimenti: (rap.rifornimenti || []).map(r => ({ tipo: r.tipo, litri: r.litri, prezzo: r.prezzo, totale: r.totale, ora: r.ora, scontrinoUrl: r.scontrinoUrl || null })) };
         const dateKey = rap.data.replace(/-/g, '_');
         await set(ref(db, 'rapportini/' + rap.targa + '/' + dateKey), rapClean);
     } catch(e) {
@@ -1798,7 +1836,7 @@ async function resyncStoricoRapportini(targa) {
         try {
             const snap = await get(ref(db, 'rapportini/' + t + '/' + dateKey));
             if (!snap.exists()) {
-                const rapClean = { ...rap, targa: t, rifornimenti: (rap.rifornimenti || []).map(r => ({ tipo: r.tipo, litri: r.litri, prezzo: r.prezzo, totale: r.totale, ora: r.ora })) };
+                const rapClean = { ...rap, targa: t, rifornimenti: (rap.rifornimenti || []).map(r => ({ tipo: r.tipo, litri: r.litri, prezzo: r.prezzo, totale: r.totale, ora: r.ora, scontrinoUrl: r.scontrinoUrl || null })) };
                 await set(ref(db, 'rapportini/' + t + '/' + dateKey), rapClean);
                 pushed++;
             }
