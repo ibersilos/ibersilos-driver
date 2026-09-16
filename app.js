@@ -507,8 +507,16 @@ function initFirebase(targa) {
     const unsub1 = onValue(ref(db, fbPath(targa)), (snap) => {
         fbConnected = true;
         updateSyncStatus(true, 'Connesso · Live');
-        // Se il dispatcher ha assegnato un missionId, forza rilettura missioni
         const d = snap.val();
+        // Riallineamento: se le fasi registrate in locale (offline, poco segnale
+        // in viaggio) sono più avanti di quelle su Firebase, spingile subito —
+        // altrimenti restano ferme finché non arriva la prossima fase manuale
+        // e il DSP continua a non vederle.
+        const tsLocal = loadTimestamps(targa);
+        if (Object.keys(tsLocal).length > 0 && JSON.stringify(tsLocal) !== JSON.stringify(d && d.timestamps || {})) {
+            pushToFirebase(targa);
+        }
+        // Se il dispatcher ha assegnato un missionId, forza rilettura missioni
         if (d && d.missionId) {
             const mid = d.missionId;
             if (!missioneCorrente || missioneCorrente.id !== mid) {
