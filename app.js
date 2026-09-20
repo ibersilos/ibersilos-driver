@@ -293,8 +293,24 @@ function confermaFase(faseId, faseLabel) {
     } else {
         kmWrap.style.display = 'none';
     }
+    // Certificato lavaggio: si allega all'arrivo al carico, dopo il campo km
+    lavaggioFaseFile = null;
+    ['lavaggioFaseCam', 'lavaggioFaseFile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const lavNome = document.getElementById('lavaggioFaseNome');
+    if (lavNome) { lavNome.style.display = 'none'; lavNome.textContent = ''; }
+    const lavWrap = document.getElementById('lavaggioFaseWrap');
+    if (lavWrap) lavWrap.style.display = faseId === 'arrivo_carico' ? 'block' : 'none';
     document.getElementById('modalConfermaFase').classList.add('active');
     if (KM_FASI[faseId]) setTimeout(() => kmInput.focus(), 300);
+}
+
+let lavaggioFaseFile = null;
+function selezionaLavaggioFase(input) {
+    const file = input.files[0];
+    if (!file) return;
+    lavaggioFaseFile = file;
+    const nome = document.getElementById('lavaggioFaseNome');
+    if (nome) { nome.textContent = 'Allegato: ' + file.name; nome.style.display = 'block'; }
 }
 
 function eseguiFase() {
@@ -317,6 +333,10 @@ function eseguiFase() {
     renderTimestamps();
     showToast(faseDaConfermare.label, formatTs(ts[faseDaConfermare.id]), 'success');
     fbPushFase(targa);
+    if (faseDaConfermare.id === 'arrivo_carico' && lavaggioFaseFile) {
+        caricaSlotFile('lavaggio', lavaggioFaseFile);
+        lavaggioFaseFile = null;
+    }
     if (faseDaConfermare.id === 'fine_scarico') {
         setTimeout(() => {
             renderDocViaggio(targa);
@@ -423,6 +443,10 @@ function renderDocViaggio(targa) {
 
 function caricaSlot(slotId, input) {
     const file = input.files[0]; if (!file) return;
+    caricaSlotFile(slotId, file);
+}
+
+function caricaSlotFile(slotId, file) {
     const targa = currentDriver.targa;
     const reader = new FileReader();
     reader.onload = async e => {
@@ -431,7 +455,7 @@ function caricaSlot(slotId, input) {
         saveDocViaggio(targa, docs);
         renderDocViaggio(targa);
         showToast('Documento caricato', 'Upload in corso...', 'success');
-        // Upload su Firebase Storage — salva URL accessibile dal DSP
+        // Upload nella cartella Drive della missione — salva URL accessibile dal DSP
         const url = await uploadDocFirebase(file, slotId, slotId);
         if (url) {
             docs[slotId].url = url;
