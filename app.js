@@ -359,7 +359,7 @@ function eseguiFase() {
 const DOC_SLOTS = [
     { id: 'cmr',      label: 'CMR',                  icon: '📋', obbligatorio: false },
     { id: 'bolla',    label: 'Bolla di consegna',    icon: '📄', obbligatorio: false },
-    { id: 'lavaggio', label: 'Certificato Lavaggio', icon: '🧼', obbligatorio: false },
+    { id: 'lavaggio', label: 'Certificato Lavaggio', icon: '🧼', obbligatorio: false, pdfOnly: true },
 ];
 
 function docViaggioKey(targa) { return 'ibs_docviaggio_' + targa; }
@@ -394,7 +394,7 @@ function renderDocViaggio(targa) {
                         ${slot.obbligatorio ? '<span style="background:var(--red);color:white;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:4px;letter-spacing:0.5px;">OBB.</span>' : ''}
                     </div>
                     ${hasdoc
-                        ? `<div style="font-size:0.7rem;color:var(--green);font-weight:700;margin-top:5px;">✓ Caricato · ${doc.nome}</div>`
+                        ? `<div style="font-size:0.75rem;color:var(--green);font-weight:800;margin-top:5px;">✓ Già caricato · ${doc.nome}</div>`
                         : `<div style="font-size:0.7rem;color:${slot.obbligatorio ? 'var(--red)' : 'var(--text-dim)'};margin-top:5px;">${slot.obbligatorio ? 'Documento obbligatorio' : 'Facoltativo'}</div>`
                     }
                 </div>
@@ -408,6 +408,10 @@ function renderDocViaggio(targa) {
                            </button>`}
                        </div>`
                     : isClosed ? `<span style="font-size:0.72rem;color:#bbb;">—</span>`
+                    : slot.pdfOnly ? `<div>
+                           <label for="slotGal_${slot.id}" style="display:flex;align-items:center;padding:9px 12px;border:1.5px solid var(--red);border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:700;background:white;color:var(--red);">Carica file PDF</label>
+                           <input type="file" id="slotGal_${slot.id}" accept="application/pdf,.pdf" style="display:none;" onchange="caricaSlot('${slot.id}',this)">
+                       </div>`
                     : `<div style="display:flex;gap:6px;">
                            <label for="slotCam_${slot.id}" style="display:flex;align-items:center;gap:4px;padding:9px 12px;border:none;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:700;background:var(--red);color:white;" title="Fotocamera diretta">📷 Foto</label>
                            <input type="file" id="slotCam_${slot.id}" accept="image/*" capture="environment" style="display:none;" onchange="caricaSlot('${slot.id}',this)">
@@ -451,6 +455,12 @@ function renderDocViaggio(targa) {
 
 function caricaSlot(slotId, input) {
     const file = input.files[0]; if (!file) return;
+    const slot = DOC_SLOTS.find(s => s.id === slotId);
+    if (slot && slot.pdfOnly && file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+        input.value = '';
+        showToast('Solo PDF', slot.label + ' va caricato in formato PDF', 'error');
+        return;
+    }
     caricaSlotFile(slotId, file);
 }
 
