@@ -1074,13 +1074,9 @@
         <!-- Scontrino -->
         <div class="form-group" style="margin-bottom:16px;">
             <label class="form-label">Scontrino</label>
-            <div id="rifScontrinoPreview" style="display:none;margin-bottom:8px;">
-                <img id="rifScontrinoImg" src="" style="height:70px;width:56px;object-fit:cover;border-radius:8px;border:2px solid var(--green);cursor:pointer;" onclick="window.open(document.getElementById('rifScontrinoImg').src,'_blank')" />
-            </div>
-            <div style="display:flex;gap:6px;">
-                <label for="rifScontrinoGal" style="display:flex;align-items:center;gap:4px;padding:9px 12px;border:none;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:700;background:var(--red);color:white;" title="Scegli file">📁 File</label>
-                <input type="file" id="rifScontrinoGal" accept="image/*" style="display:none;" onchange="caricaRifScontrino(this)">
-            </div>
+            <div id="rifScontrinoPreview" style="display:none;margin-bottom:8px;font-size:0.8rem;font-weight:700;color:var(--green);"></div>
+            <label for="rifScontrinoGal" style="display:block;text-align:center;padding:12px;border:1.5px solid var(--red);border-radius:10px;cursor:pointer;font-size:0.85rem;font-weight:700;background:white;color:var(--red);">Carica file PDF</label>
+            <input type="file" id="rifScontrinoGal" accept="application/pdf,.pdf" style="display:none;" onchange="caricaRifScontrino(this)">
         </div>
 
         <div class="input-row">
@@ -1160,12 +1156,8 @@
         </div>
         <div id="lavaggioFaseWrap" style="display:none;margin-bottom:16px;">
             <label style="display:block;font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Certificato lavaggio <span style="font-weight:600;opacity:0.6;text-transform:none;letter-spacing:0;">(facoltativo)</span></label>
-            <div style="display:flex;gap:8px;">
-                <label for="lavaggioFaseCam" style="flex:1;text-align:center;padding:11px 12px;border-radius:10px;cursor:pointer;font-size:0.82rem;font-weight:700;background:var(--red);color:white;">Foto</label>
-                <input type="file" id="lavaggioFaseCam" accept="image/*" capture="environment" style="display:none;" onchange="selezionaLavaggioFase(this)">
-                <label for="lavaggioFaseFile" style="flex:1;text-align:center;padding:11px 12px;border:1.5px solid var(--red);border-radius:10px;cursor:pointer;font-size:0.82rem;font-weight:700;background:white;color:var(--red);">File / PDF</label>
-                <input type="file" id="lavaggioFaseFile" accept="image/*,application/pdf" style="display:none;" onchange="selezionaLavaggioFase(this)">
-            </div>
+            <label for="lavaggioFaseFile" style="display:block;text-align:center;padding:12px;border:1.5px solid var(--red);border-radius:10px;cursor:pointer;font-size:0.85rem;font-weight:700;background:white;color:var(--red);">Carica file PDF</label>
+            <input type="file" id="lavaggioFaseFile" accept="application/pdf,.pdf" style="display:none;" onchange="selezionaLavaggioFase(this)">
             <div id="lavaggioFaseNome" style="display:none;margin-top:8px;font-size:0.78rem;font-weight:700;color:var(--green);"></div>
         </div>
         <div class="input-row">
