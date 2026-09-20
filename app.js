@@ -295,7 +295,8 @@ function confermaFase(faseId, faseLabel) {
     }
     // Certificato lavaggio: si allega all'arrivo al carico, dopo il campo km
     lavaggioFaseFile = null;
-    ['lavaggioFaseCam', 'lavaggioFaseFile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const lavInput = document.getElementById('lavaggioFaseFile');
+    if (lavInput) lavInput.value = '';
     const lavNome = document.getElementById('lavaggioFaseNome');
     if (lavNome) { lavNome.style.display = 'none'; lavNome.textContent = ''; }
     const lavWrap = document.getElementById('lavaggioFaseWrap');
@@ -308,6 +309,11 @@ let lavaggioFaseFile = null;
 function selezionaLavaggioFase(input) {
     const file = input.files[0];
     if (!file) return;
+    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+        input.value = '';
+        showToast('Solo PDF', 'Il certificato lavaggio va caricato in formato PDF', 'error');
+        return;
+    }
     lavaggioFaseFile = file;
     const nome = document.getElementById('lavaggioFaseNome');
     if (nome) { nome.textContent = 'Allegato: ' + file.name; nome.style.display = 'block'; }
@@ -394,7 +400,9 @@ function renderDocViaggio(targa) {
                 </div>
                 ${hasdoc
                     ? `<div style="display:flex;gap:6px;align-items:center;">
-                           <img src="${doc.thumb}" style="height:48px;width:40px;object-fit:cover;border-radius:6px;border:1px solid var(--green);cursor:pointer;" onclick="apriDocImg('${slot.id}')" />
+                           ${doc.thumb
+                               ? `<img src="${doc.thumb}" style="height:48px;width:40px;object-fit:cover;border-radius:6px;border:1px solid var(--green);cursor:pointer;" onclick="apriDocImg('${slot.id}')" />`
+                               : `<button onclick="apriDocImg('${slot.id}')" style="height:36px;padding:0 10px;border:1.5px solid var(--green);border-radius:6px;background:white;color:var(--green);font-size:0.72rem;font-weight:800;cursor:pointer;">PDF</button>`}
                            ${isClosed ? '' : `<button onclick="rimuoviSlot('${slot.id}')" style="background:none;border:none;cursor:pointer;">
                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
                            </button>`}
@@ -451,15 +459,21 @@ function caricaSlotFile(slotId, file) {
     const reader = new FileReader();
     reader.onload = async e => {
         const docs = loadDocViaggio(targa);
-        docs[slotId] = { nome: file.name, thumb: e.target.result, url: null };
+        // Per i PDF niente anteprima base64: appesantirebbe il localStorage e <img> non li mostra
+        const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+        docs[slotId] = { nome: file.name, thumb: isPdf ? null : e.target.result, url: null };
         saveDocViaggio(targa, docs);
         renderDocViaggio(targa);
         showToast('Documento caricato', 'Upload in corso...', 'success');
         // Upload nella cartella Drive della missione — salva URL accessibile dal DSP
         const url = await uploadDocFirebase(file, slotId, slotId);
         if (url) {
-            docs[slotId].url = url;
-            saveDocViaggio(targa, docs);
+            const docsNow = loadDocViaggio(targa);
+            if (docsNow[slotId]) {
+                docsNow[slotId].url = url;
+                saveDocViaggio(targa, docsNow);
+                renderDocViaggio(targa);
+            }
         }
         fbPushFase(targa);
     };
@@ -1387,6 +1401,9 @@ function renderRapportino(rap) {
                         <div style="margin-top:8px;">
                             <img src="${r.scontrinoThumb}" style="height:60px;border-radius:6px;border:2px solid var(--green);object-fit:cover;cursor:pointer;" onclick="apriScontrino('${i}')" />
                             <div style="font-size:0.68rem;color:var(--green);font-weight:700;margin-top:3px;">✓ Scontrino allegato</div>
+                        </div>` : (r.scontrinoNome || r.scontrinoUrl) ? `
+                        <div style="margin-top:8px;">
+                            <button onclick="apriScontrino('${i}')" style="background:white;border:1.5px solid var(--green);border-radius:6px;padding:6px 10px;font-size:0.72rem;font-weight:700;color:var(--green);cursor:pointer;">Scontrino PDF${r.scontrinoUrl ? '' : ' (invio in corso)'}</button>
                         </div>` : ''}
                     </div>
                     ${!rap.chiuso ? `<button onclick="eliminaRifornimento(${i})" style="background:none;border:none;cursor:pointer;padding:4px;flex-shrink:0;">
@@ -1529,13 +1546,15 @@ function apriModalRif() {
 
 function caricaRifScontrino(input) {
     const file = input.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        _rifScontrino = { file, thumb: e.target.result };
-        document.getElementById('rifScontrinoImg').src = e.target.result;
-        document.getElementById('rifScontrinoPreview').style.display = 'block';
-    };
-    reader.readAsDataURL(file);
+    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+        input.value = '';
+        showToast('Solo PDF', 'Lo scontrino va caricato in formato PDF', 'error');
+        return;
+    }
+    _rifScontrino = { file };
+    const prev = document.getElementById('rifScontrinoPreview');
+    prev.textContent = 'Allegato: ' + file.name;
+    prev.style.display = 'block';
 }
 
 function selezionaCarburante(tipo) {
@@ -1568,8 +1587,9 @@ function calcolaImporto() {
 function apriScontrino(index) {
     const rap = loadRapportino(currentDriver.targa);
     const r = (rap.rifornimenti || [])[index];
-    if (!r || (!r.scontrinoThumb && !r.scontrinoUrl)) return;
+    if (!r || (!r.scontrinoThumb && !r.scontrinoUrl && !r.scontrinoNome)) return;
     if (r.scontrinoUrl) { window.open(r.scontrinoUrl, '_blank'); return; }
+    if (!r.scontrinoThumb) { showToast('Scontrino', 'Upload in corso, riprova tra poco', 'info'); return; }
     const w = window.open('', '_blank');
     w.document.write('<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="' + (r.scontrinoThumb||'') + '" style="max-width:100%;max-height:100vh;"><\/body><\/html>');
     w.document.close();
@@ -1591,7 +1611,7 @@ async function salvaRifornimento() {
     const idx = rap.rifornimenti.push({
         tipo, litri: litri.toFixed(1), prezzo: prezzo.toFixed(3), totale,
         ora: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-        scontrinoThumb: scontrino ? scontrino.thumb : null,
+        scontrinoNome: scontrino ? scontrino.file.name : null,
         scontrinoUrl: null,
     }) - 1;
     saveRapportino(rap);
@@ -1602,7 +1622,7 @@ async function salvaRifornimento() {
 
     // Upload scontrino su Drive in background — non blocca il salvataggio
     if (scontrino && scontrino.file) {
-        const missionId = missioneCorrente ? missioneCorrente.id : (targa + '_' + rap.data);
+        const missionId = missioneCorrente ? (missioneCorrente.numeroOrdine || missioneCorrente.id) : (targa + '_' + rap.data);
         const url = await uploadDocToDrive(scontrino.file, 'scontrino_' + tipo.toLowerCase(), missionId);
         if (url) {
             const rapNow = loadRapportino(targa);
@@ -2059,7 +2079,7 @@ function apriDettaglioRap(index) {
                             <div style="font-weight:800;font-size:0.9rem;color:var(--red);margin-top:2px;">€ ${rf.totale}</div>
                             <div style="font-size:0.72rem;color:var(--text-dim);">${rf.litri} L × € ${rf.prezzo}/L</div>
                         </div>
-                        ${rf.scontrinoThumb ? `<img src="${rf.scontrinoThumb}" style="height:50px;width:40px;object-fit:cover;border-radius:5px;border:1px solid var(--green);margin-left:8px;flex-shrink:0;" />` : '<span style="font-size:0.68rem;color:#f44;margin-left:8px;">No scontrino</span>'}
+                        ${rf.scontrinoThumb ? `<img src="${rf.scontrinoThumb}" style="height:50px;width:40px;object-fit:cover;border-radius:5px;border:1px solid var(--green);margin-left:8px;flex-shrink:0;" />` : (rf.scontrinoNome || rf.scontrinoUrl) ? '<span style="font-size:0.68rem;color:var(--green);font-weight:700;margin-left:8px;">Scontrino PDF</span>' : '<span style="font-size:0.68rem;color:#f44;margin-left:8px;">No scontrino</span>'}
                     </div>
                 </div>`).join('')}
             <div style="background:linear-gradient(135deg,var(--red),var(--dark-red));border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">
