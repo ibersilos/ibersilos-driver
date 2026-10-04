@@ -540,6 +540,15 @@ function fbPath(targa) {
 // Missione corrente assegnata dal dispatcher
 // missioneCorrente dichiarata nel blocco 1
 
+// Coda missioni sullo stesso mezzo: il driver vede la più vicina per data di
+// carico; la successiva compare solo quando la prima è completata.
+function scegliMissioneAttiva(lista, targa) {
+    return lista
+        .filter(m => m && (m.targa === targa || m.autistaTarga === targa || m.plate === targa) &&
+                     m.status !== 'completed' && m.status !== 'cancelled' && m.status !== 'pending')
+        .sort((a, b) => ((a.dateISO || '9999') + String(a.id)).localeCompare((b.dateISO || '9999') + String(b.id)))[0] || null;
+}
+
 function initFirebase(targa) {
     if (!window._fbReady || !window._fb) {
         updateSyncStatus(false, 'Firebase non configurato — modalità offline');
@@ -579,10 +588,7 @@ function initFirebase(targa) {
                     if (!s.exists()) return;
                     const val = s.val();
                     const lista2 = Array.isArray(val) ? val : Object.values(val);
-                    const mia2 = lista2.find(function(m) {
-                        return (m.targa === targa || m.autistaTarga === targa || m.plate === targa) &&
-                               m.status !== 'completed' && m.status !== 'cancelled';
-                    });
+                    const mia2 = scegliMissioneAttiva(lista2, targa);
                     if (mia2 && (!missioneCorrente || missioneCorrente.id !== mia2.id)) {
                         missioneCorrente = mia2;
                         aggiornaHeroMissione(mia2);
@@ -607,11 +613,7 @@ function initFirebase(targa) {
         const lista = Array.isArray(data) ? data : Object.values(data);
 
         // Missione corrente (attiva)
-        const mia = lista.find(m =>
-            (m.targa === targa || m.autistaTarga === targa || m.plate === targa) &&
-            m.status !== 'completed' &&
-            m.status !== 'cancelled'
-        );
+        const mia = scegliMissioneAttiva(lista, targa);
         const isNuova = mia && (!missioneCorrente || missioneCorrente.id !== mia.id);
         missioneCorrente = mia || null;
 
