@@ -889,8 +889,9 @@ function aggiornaPercorsoCard(m) {
     }
 
     // ── Note dispatcher ───────────────────────────────────────────────
-    // Il DSP salva: m.note, m.istruzioni, m.annotazioni
-    const note = m.note || m.istruzioni || m.annotazioni || '';
+    // Solo le istruzioni operative per il driver (noteSv: orari, contatti, accessi
+    // allo scarico). m.note è riservata al dispatcher e NON va mostrata.
+    const note = m.noteSv || m.istruzioni || '';
     if (note) {
         divNote.textContent = note;
         divNote.style.display = 'block';
