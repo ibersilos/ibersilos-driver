@@ -617,7 +617,7 @@ function initFirebase(targa) {
     // 2. Missioni dispatcher — ascolta in real-time
     const unsub2 = onValue(ref(db, 'dispatcher/missions'), (snap) => {
         const data = snap.val();
-        if (!data) return;
+        if (!data) { missioneCorrente = null; aggiornaHeroMissione(null); return; }
         const lista = Array.isArray(data) ? data : Object.values(data);
 
         // Missione corrente (attiva)
@@ -754,8 +754,8 @@ function aggiornaHeroMissione(m) {
     if (label) label.textContent = m.id || 'Missione assegnata';
     const eb2 = document.getElementById('eurowagBtn');
     if (eb2) eb2.style.display = 'block';
-    if (elDa)  elDa.textContent  = estraiCitta(m.from);
-    if (elA)   elA.textContent   = estraiCitta(m.to);
+    if (elDa)  elDa.textContent  = (m.fromNome ? m.fromNome + ' · ' : '') + estraiCitta(m.from);
+    if (elA)   elA.textContent   = (m.toNome ? m.toNome + ' · ' : '') + estraiCitta(m.to);
     if (rottaWrap) rottaWrap.style.display = '';
     // Info cargo sotto rotta
     const info = [
