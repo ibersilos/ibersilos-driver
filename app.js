@@ -2216,16 +2216,22 @@ function initChatDriver() {
         // Messaggi dalla Centrale (non dal driver stesso)
         const fromCentrale = msgs.filter(m => !currentDriver ||
             (m.from !== currentDriver.nome && m.from !== currentDriver.code));
-        if (fromCentrale.length > chatMsgCount) {
+        // Nuovo = timestamp successivo all'ultimo già visto (salvato per driver):
+        // al login/riapertura i messaggi vecchi NON devono suonare di nuovo.
+        const _tsKey = 'ibs_chat_lastts_' + currentDriver.code;
+        const _stored = localStorage.getItem(_tsKey);
+        const _maxTs = fromCentrale.reduce((mx, m) => Math.max(mx, m.ts || 0), 0);
+        const _last = _stored === null ? _maxTs : (parseInt(_stored, 10) || 0);
+        const nuovi = fromCentrale.filter(m => (m.ts || 0) > _last);
+        if (nuovi.length) {
             const dot = document.getElementById('chatDot');
             if (dot) dot.style.display = 'block';
-            // Ding + notifica push per ogni nuovo messaggio
-            const nuovi = fromCentrale.slice(chatMsgCount);
             nuovi.forEach(m => {
                 playDing();
                 if (document.hidden) inviaNotificaPush(m.text);
             });
         }
+        try { localStorage.setItem(_tsKey, String(Math.max(_maxTs, _last))); } catch(e) {}
         chatMsgCount = fromCentrale.length;
     });
 }
