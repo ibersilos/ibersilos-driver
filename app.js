@@ -904,6 +904,10 @@ function aggiornaPercorsoCard(m) {
     if (divPh) divPh.style.display = hasContent ? 'none' : 'block';
 }
 
+function escChat(x) {
+    return String(x == null ? '' : x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function updateSyncStatus(connected, msg) {
     const dot = document.getElementById('fbDot');
     const label = document.getElementById('fbSyncLabel');
@@ -2241,9 +2245,9 @@ function renderChatMessages(msgs) {
             const side   = isDriver ? 'mine' : 'theirs';
             const sender = isDriver ? 'Tu' : (m.from || 'Centrale');
             return '<div class="msg ' + side + '">'
-                + '<div class="msg-sender">' + sender + '</div>'
-                + '<div class="msg-bubble">' + (m.text || '') + '</div>'
-                + '<div class="msg-time">' + (m.time || '') + '</div>'
+                + '<div class="msg-sender">' + escChat(sender) + '</div>'
+                + '<div class="msg-bubble">' + escChat(m.text || '') + '</div>'
+                + '<div class="msg-time">' + escChat(m.time || '') + '</div>'
                 + '</div>';
         }).join('');
     }
