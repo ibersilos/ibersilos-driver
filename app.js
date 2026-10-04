@@ -476,7 +476,10 @@ function caricaSlotFile(slotId, file) {
         renderDocViaggio(targa);
         showToast('Documento caricato', 'Upload in corso...', 'success');
         // Upload nella cartella Drive della missione — salva URL accessibile dal DSP
-        const url = await uploadDocFirebase(file, slotId, slotId);
+        window._uploadPendenti = (window._uploadPendenti || 0) + 1;
+        let url = null;
+        try { url = await uploadDocFirebase(file, slotId, slotId); }
+        finally { window._uploadPendenti = Math.max(0, (window._uploadPendenti || 1) - 1); }
         if (url) {
             const docsNow = loadDocViaggio(targa);
             if (docsNow[slotId]) {
@@ -497,6 +500,7 @@ function rimuoviSlot(slotId) {
     delete docs[slotId];
     saveDocViaggio(targa, docs);
     renderDocViaggio(targa);
+    fbPushFase(targa);
 }
 
 
@@ -504,7 +508,7 @@ function rimuoviExtra(index) {
     if (!confirm('Rimuovere questo documento?')) return;
     const targa = currentDriver.targa;
     const docs = loadDocViaggio(targa);
-    if (docs._extra) { docs._extra.splice(index, 1); saveDocViaggio(targa, docs); renderDocViaggio(targa); }
+    if (docs._extra) { docs._extra.splice(index, 1); saveDocViaggio(targa, docs); renderDocViaggio(targa); fbPushFase(targa); }
 }
 
 function apriDocImg(slotId) {
@@ -564,6 +568,10 @@ function initFirebase(targa) {
     const unsub1 = onValue(ref(db, fbPath(targa)), (snap) => {
         fbConnected = true;
         updateSyncStatus(true, 'Connesso · Live');
+        if (!window._chiusuraRetryAt || Date.now() - window._chiusuraRetryAt > 30000) {
+            window._chiusuraRetryAt = Date.now();
+            riprovaChiusuraPendente(targa);
+        }
         const d = snap.val();
         // Riallineamento: se le fasi registrate in locale (offline, poco segnale
         // in viaggio) sono più avanti di quelle su Firebase, spingile subito —
@@ -957,6 +965,40 @@ async function pushToFirebase(targa) {
     }
 }
 
+// Promise con timeout: ritorna fallback se non risolve entro ms (rete assente).
+function conTimeout(p, ms, fallback) {
+    return Promise.race([p, new Promise(res => setTimeout(() => res(fallback), ms))]).catch(() => fallback);
+}
+
+// Segna la missione come completata sul dispatcher. true se scritto.
+async function completaMissioneRemoto(missionId, targa, completedAt) {
+    if (!window._fb) return false;
+    const { db, ref, get, update } = window._fb;
+    const snap = await get(ref(db, 'dispatcher/missions'));
+    if (!snap.exists()) return false;
+    const lista = snap.val();
+    const entries = Array.isArray(lista) ? lista.map((m, i) => [String(i), m]) : Object.entries(lista);
+    for (const [key, m] of entries) {
+        if (m && (m.id === missionId || m.numeroOrdine === missionId)) {
+            await update(ref(db, 'dispatcher/missions/' + key), {
+                status: 'completed', completedAt: completedAt || new Date().toISOString(), completedBy: targa,
+            });
+            return true;
+        }
+    }
+    return false;
+}
+
+// Ritenta una chiusura rimasta in sospeso per mancanza di rete.
+async function riprovaChiusuraPendente(targa) {
+    let p; try { p = JSON.parse(localStorage.getItem('ibs_pending_close_' + targa) || 'null'); } catch(e) { p = null; }
+    if (!p || !p.id) return;
+    if (await conTimeout(completaMissioneRemoto(p.id, targa, p.completedAt), 8000, false)) {
+        localStorage.removeItem('ibs_pending_close_' + targa);
+        showToast('Chiusura sincronizzata', 'Viaggio ' + p.id + ' inviato alla centrale', 'success');
+    }
+}
+
 async function chiudiViaggio() {
     const targa = currentDriver.targa;
     const docs = loadDocViaggio(targa);
@@ -968,6 +1010,10 @@ async function chiudiViaggio() {
         return;
     }
 
+    if (window._uploadPendenti > 0) {
+        showToast('Upload in corso', 'Attendi la fine del caricamento dei documenti prima di chiudere', 'warning');
+        return;
+    }
     if (!confirm('Chiudere il viaggio? Questa operazione è irreversibile. I dati verranno inviati alla centrale.')) return;
 
     // Spinner sul bottone
@@ -985,37 +1031,24 @@ async function chiudiViaggio() {
     saveDocViaggio(targa, docs);
 
     // Push stato viaggio al Realtime DB
-    const sent = await pushToFirebase(targa);
+    const sent = await conTimeout(pushToFirebase(targa), 8000, false);
 
     // Nota: lo snapshot fasi/timestamps di fine viaggio non viene più
     // archiviato a parte — i timestamp restano solo su Firebase (viaggi_sv),
     // non servono nella cartella Drive della missione.
 
     // ── Aggiorna status missione nel dispatcher ──────────────────────
-    if (missioneCorrente && window._fb) {
-        try {
-            const { db, ref, get, update } = window._fb;
-            const snap = await get(ref(db, 'dispatcher/missions'));
-            if (snap.exists()) {
-                const lista = snap.val();
-                // lista può essere array o object
-                const entries = Array.isArray(lista)
-                    ? lista.map((m, i) => [String(i), m])
-                    : Object.entries(lista);
-                for (const [key, m] of entries) {
-                    if (m && (m.id === missioneCorrente.id || m.numeroOrdine === missioneCorrente.id)) {
-                        await update(ref(db, 'dispatcher/missions/' + key), {
-                            status:      'completed',
-                            completedAt: new Date().toISOString(),
-                            completedBy: targa,
-                        });
-                        break;
-                    }
-                }
-            }
-            missioneCorrente = null;
-            aggiornaHeroMissione(null);
-        } catch(e) { console.warn('[chiudiViaggio] FB update error:', e); }
+    if (missioneCorrente) {
+        const _midChiusa = missioneCorrente.id;
+        const _completedAt = new Date().toISOString();
+        // Se offline/lento la chiusura resta in coda e viene ritentata alla
+        // riconnessione: la missione non rimane "in corso" sul DSP per sempre.
+        const ok = await conTimeout(completaMissioneRemoto(_midChiusa, targa, _completedAt), 8000, false);
+        if (!ok) {
+            try { localStorage.setItem('ibs_pending_close_' + targa, JSON.stringify({ id: _midChiusa, completedAt: _completedAt })); } catch(e) {}
+        }
+        missioneCorrente = null;
+        aggiornaHeroMissione(null);
     }
 
     // ── Archivia missione locale ──────────────────────────────────────
