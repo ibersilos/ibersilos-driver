@@ -560,8 +560,15 @@ function initFirebase(targa) {
         // in viaggio) sono più avanti di quelle su Firebase, spingile subito —
         // altrimenti restano ferme finché non arriva la prossima fase manuale
         // e il DSP continua a non vederle.
+        // Confronto chiave per chiave (RTDB riordina le chiavi: un JSON.stringify
+        // non combacia mai e innescava un ciclo infinito di scritture). Solo per
+        // la missione corrente, e al massimo un push ogni 20s.
         const tsLocal = loadTimestamps(targa);
-        if (Object.keys(tsLocal).length > 0 && JSON.stringify(tsLocal) !== JSON.stringify(d && d.timestamps || {})) {
+        const tsRemote = (d && d.timestamps) || {};
+        const nonAllineato = Object.keys(tsLocal).some(k => tsLocal[k] !== tsRemote[k]);
+        const stessaMissione = missioneCorrente && d && String(d.missionId || '').replace(/\//g,'_') === String(missioneCorrente.id).replace(/\//g,'_');
+        if (nonAllineato && stessaMissione && Date.now() - (window._lastReconcilePush || 0) > 20000) {
+            window._lastReconcilePush = Date.now();
             pushToFirebase(targa);
         }
         // Se il dispatcher ha assegnato un missionId, forza rilettura missioni
@@ -1033,7 +1040,7 @@ async function chiudiViaggio() {
 
 // Push automatico ad ogni cambio di fase (live tracking)
 async function fbPushFase(targa) {
-    if (!fbConnected) return;
+    if (!fbConnected || !missioneCorrente) return;
     await pushToFirebase(targa);
 }
 
